@@ -13,7 +13,7 @@ Set up 2026-10-11/12. Two environments:
 **Pinned digest:** `sha256:626fbff9c062bc3723ee617a6930ff96913750f6847a8df9e2319d84f8169c45`
 **SIF:** `~/containers/slime_v0.4.0-cu129.sif`, 18 GB,
 sha256 `1877674763701cc4a373d793c89332f31e9b76536f93bcecb61ede7bd2c5d665`
-**Built by:** `jobs/pull_slime.sbatch` (`day`, 8 CPU, 32 GB). Layer cache: `~/scratch_pi_lz484/wb379/apptainer/cache`.
+**Built by:** `jobs/pull_slime.sbatch` (`day`, 8 CPU, 32 GB). Layer cache: `~/scratch_pi_lz484/$USER/apptainer/cache`.
 
 ### Versions inside the image
 
@@ -47,7 +47,7 @@ which expands to:
 ```bash
 apptainer exec --nv --cleanenv --writable-tmpfs \
     --bind /nfs/roberts/scratch \
-    --env HF_HOME=$HOME/scratch_pi_lz484/wb379/hf_cache \
+    --env HF_HOME=$HOME/scratch_pi_lz484/$USER/hf_cache \
     --env PYTHONNOUSERSITE=1 --env PYTHONUNBUFFERED=1 \
     --env PYTHONPATH=/root/Megatron-LM \
     --env CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES \
@@ -88,7 +88,7 @@ all 48 node CPUs and a 200 GB object store in a job that had 8 CPUs / 64 GB.
 
 ```bash
 module reset && module load miniconda && conda activate ~/envs/afai_env
-export PYTHONNOUSERSITE=1 HF_HOME=$HOME/scratch_pi_lz484/wb379/hf_cache
+export PYTHONNOUSERSITE=1 HF_HOME=$HOME/scratch_pi_lz484/$USER/hf_cache
 ```
 
 Verified on H200 (`verify_afai_env` 29248780): CUDA available, arch list includes `sm_90` and `sm_100`; both
@@ -146,9 +146,9 @@ No ready-made Qwen3-30B-A3B SFT script; combine the 30B model/parallel args with
 
 | What | Path (scratch, purged after 30 days) | Made by |
 |---|---|---|
-| HF base model (57 GB, 16 shards) | `~/scratch_pi_lz484/wb379/models/Qwen3-30B-A3B-Base` | `jobs/download_30b.sbatch` |
+| HF base model (57 GB, 16 shards) | `~/scratch_pi_lz484/$USER/models/Qwen3-30B-A3B-Base` | `jobs/download_30b.sbatch` |
 | GRPO data / eval | `.../data/dapo-math-17k/dapo-math-17k.jsonl`, `.../data/aime-2024/aime-2024.jsonl` | same |
-| Megatron torch_dist (`--ref-load`) | `~/scratch_pi_lz484/wb379/ckpt/Qwen3-30B-A3B-Base_torch_dist` (57 GB) | `jobs/convert_30b.sbatch` |
+| Megatron torch_dist (`--ref-load`) | `~/scratch_pi_lz484/$USER/ckpt/Qwen3-30B-A3B-Base_torch_dist` (57 GB) | `jobs/convert_30b.sbatch` |
 
 Conversion of the 30B model on **one** H200 (job 29263777, 18 min): HF → torch_dist → HF round trip, 18867/18867
 tensors bit-identical, logits diff 0. Download needs `--mem=64G` (16G was OOM-killed by hf_xet).
@@ -190,3 +190,22 @@ env vars (passed with `slime_exec env VAR=... bash jobs/lib/run_30b.sh ...` beca
 - Home (125 GB quota, backed up): SIF 18 GB + afai_env 7.1 GB.
 - Scratch (purged after 30 days): `apptainer/cache` (image layers, ~22 GB, can be deleted any time; only needed to
   re-pull), `hf_cache`, `models/Qwen3-0.6B`, `verify/` (test outputs, all disposable), `pip_cache`, `conda_pkgs`.
+
+## 7. Reproducing this setup (another account on Bouchet)
+
+Everything is per-user: scripts use `$HOME` and `SCR=${SCR:-$HOME/scratch_pi_lz484/$USER}`. If your scratch lives
+elsewhere (e.g. a different PI group), submit with `SCR=/your/scratch/dir sbatch ...` (sbatch exports it).
+
+1. Get the code into your home (code lives in home; it is backed up): `git clone <repo URL> ~/afai_project && cd ~/afai_project`
+2. Container (identical image, pinned by digest; ~50 min): `sbatch jobs/pull_slime.sbatch`
+   → `~/containers/slime_v0.4.0-cu129.sif`. The file's sha256 can differ from the one above (SIF build metadata);
+   the image contents are what the digest pins. Check with step 4.
+3. afai_env (exact pins from `envs/afai_env.requirements.txt`; ~15 min): `sbatch jobs/build_afai_env.sbatch`
+   → `~/envs/afai_env`. Never `conda create -n` (see problem 6).
+4. Verify (1 GPU each, a few minutes): `sbatch jobs/verify_container.sbatch`, then `verify_sglang`, `verify_convert`,
+   `verify_router_freeze`, `verify_afai_env` (the last one reads outputs of `verify_convert`/`verify_router_freeze`).
+   Compare the versions/commits printed by `verify_container` with §1.
+5. 30B model and data: `D=$(sbatch --parsable jobs/download_30b.sbatch); sbatch --dependency=afterok:$D jobs/convert_30b.sbatch`
+   (~25 min total). If you are in the same group, you can instead point runs at an existing copy with
+   `HF_CKPT=... REF_LOAD=...` (group scratch dirs are group-readable).
+6. Runs: see `jobs/smoke_30b.sbatch` and `jobs/lib/run_30b.sh`.

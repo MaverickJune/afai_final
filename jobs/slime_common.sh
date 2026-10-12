@@ -2,7 +2,7 @@
 # Runs <cmd> inside the pinned slime image with GPUs, home and group scratch visible.
 
 SLIME_SIF=${SLIME_SIF:-$HOME/containers/slime_v0.4.0-cu129.sif}
-SCR=$HOME/scratch_pi_lz484/wb379
+SCR=${SCR:-$HOME/scratch_pi_lz484/$USER}
 export HF_HOME=$SCR/hf_cache
 mkdir -p "$HF_HOME"
 
@@ -17,6 +17,7 @@ slime_exec() {
     apptainer exec --nv --cleanenv --writable-tmpfs \
         --bind /nfs/roberts/scratch \
         --env HF_HOME="$HF_HOME" \
+        --env SCR="$SCR" \
         --env PYTHONNOUSERSITE=1 \
         --env PYTHONUNBUFFERED=1 \
         --env PYTHONPATH=/root/Megatron-LM \

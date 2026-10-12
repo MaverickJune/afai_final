@@ -12,7 +12,7 @@ MODE=$1
 RUN=$2
 shift 2
 
-SCR=${SCR:-$HOME/scratch_pi_lz484/wb379}
+SCR=${SCR:-$HOME/scratch_pi_lz484/$USER}
 NGPUS=${NGPUS:-$(nvidia-smi -L | wc -l)}
 HF_CKPT=${HF_CKPT:-$SCR/models/Qwen3-30B-A3B-Base}
 REF_LOAD=${REF_LOAD:-$SCR/ckpt/Qwen3-30B-A3B-Base_torch_dist}

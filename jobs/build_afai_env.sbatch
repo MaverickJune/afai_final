@@ -10,7 +10,7 @@
 set -eo pipefail
 
 ENV=$HOME/envs/afai_env
-SCR=$HOME/scratch_pi_lz484/wb379
+SCR=${SCR:-$HOME/scratch_pi_lz484/$USER}
 export PIP_CACHE_DIR=$SCR/pip_cache
 export CONDA_PKGS_DIRS=$SCR/conda_pkgs
 mkdir -p "$PIP_CACHE_DIR" "$CONDA_PKGS_DIRS" "$HOME/envs"
@@ -25,9 +25,11 @@ conda activate "$ENV"
 export PYTHONNOUSERSITE=1
 which python pip
 
-# cu128 wheels include sm_90 (H100/H200) and sm_100 (B200)
-pip install torch --index-url https://download.pytorch.org/whl/cu128
-pip install transformers safetensors accelerate numpy pandas matplotlib
+# Exact pins from the original build (2026-10-11). torch==2.11.0+cu128 comes from the PyTorch cu128 index;
+# cu128 wheels include sm_90 (H100/H200) and sm_100 (B200).
+# To upgrade instead: pip install torch --index-url https://download.pytorch.org/whl/cu128 &&
+#                     pip install transformers safetensors accelerate numpy pandas matplotlib
+pip install -r envs/afai_env.requirements.txt --extra-index-url https://download.pytorch.org/whl/cu128
 
 pip freeze > logs/afai_env_freeze.txt
 python - <<'EOF'

@@ -11,7 +11,7 @@
 set -eo pipefail
 module reset && module load miniconda && conda activate ~/envs/afai_env
 export PYTHONNOUSERSITE=1
-SCR=$HOME/scratch_pi_lz484/wb379
+SCR=${SCR:-$HOME/scratch_pi_lz484/$USER}
 export HF_HOME=$SCR/hf_cache
 nvidia-smi --query-gpu=name,driver_version --format=csv
 
