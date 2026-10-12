@@ -38,6 +38,15 @@ missing, extra = sorted(set(A) - set(B)), sorted(set(B) - set(A))
 print(f"missing in new: {len(missing)} {missing[:10]}")
 print(f"extra in new:   {len(extra)} {extra[:10]}")
 
+
+# Tied embeddings: the original may store a redundant lm_head.weight; slime omits it and HF re-ties on load.
+if missing == ["lm_head.weight"] and "model.embed_tokens.weight" in A:
+    import json
+
+    tied = json.load(open(os.path.join(a.orig, "config.json"))).get("tie_word_embeddings", False)
+    if tied and torch.equal(A["lm_head.weight"], A["model.embed_tokens.weight"]):
+        print("lm_head.weight omitted: tie_word_embeddings=true and it equals embed_tokens in orig -> OK")
+        missing = []
 ok = not missing and not extra
 n_equal = n_diff = 0
 for k in sorted(set(A) & set(B)):

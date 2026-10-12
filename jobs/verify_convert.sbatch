@@ -25,7 +25,7 @@ echo '=== HF -> torch_dist'
 python tools/convert_hf_to_torch_dist.py \${MODEL_ARGS[@]} --hf-checkpoint $HF --save $WORK/torch_dist
 ls $WORK/torch_dist $WORK/torch_dist/release | head
 echo '=== torch_dist -> HF'
-python tools/convert_torch_dist_to_hf.py --input-dir $WORK/torch_dist/release \
+python $PWD/jobs/lib/convert_torch_dist_to_hf.py --input-dir $WORK/torch_dist/release \
     --output-dir $WORK/hf_roundtrip --origin-hf-dir $HF --vocab-size 151936
 ls -la $WORK/hf_roundtrip
 echo '=== compare'

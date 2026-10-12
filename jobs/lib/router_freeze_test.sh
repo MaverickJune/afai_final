@@ -36,7 +36,7 @@ for k in keys:
 EOF
 
 echo "=== [3] torch_dist -> HF of the unmodified conversion (MoE round trip)"
-python tools/convert_torch_dist_to_hf.py --input-dir "$WORK/torch_dist/release" \
+python "$PROJ/jobs/lib/convert_torch_dist_to_hf.py" --input-dir "$WORK/torch_dist/release" \
     --output-dir "$WORK/hf_roundtrip" --origin-hf-dir "$HF" --vocab-size 151936
 python "$PROJ/jobs/lib/compare_hf.py" "$HF" "$WORK/hf_roundtrip"
 
@@ -73,7 +73,7 @@ run_sft() {   # $1 = run name, rest = extra args
     local last
     last=$(cat "$WORK/$name/latest_checkpointed_iteration.txt")
     echo "latest iteration: $last"
-    python tools/convert_torch_dist_to_hf.py --input-dir "$WORK/$name/$(printf 'iter_%07d' "$last")" \
+    python "$PROJ/jobs/lib/convert_torch_dist_to_hf.py" --input-dir "$WORK/$name/$(printf 'iter_%07d' "$last")" \
         --output-dir "$WORK/${name}_hf" --origin-hf-dir "$HF" --vocab-size 151936
 }
 
