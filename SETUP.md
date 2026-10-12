@@ -142,6 +142,24 @@ No ready-made Qwen3-30B-A3B SFT script; combine the 30B model/parallel args with
 - The inverse option `--only-train-params-name-list` also exists (mutually exclusive).
 - Only the trainer side is affected; SGLang rollout routing still uses the (unchanged) router weights it is synced.
 
+## 4b. Qwen3-30B-A3B-Base: data, checkpoints, launcher
+
+| What | Path (scratch, purged after 30 days) | Made by |
+|---|---|---|
+| HF base model (57 GB, 16 shards) | `~/scratch_pi_lz484/wb379/models/Qwen3-30B-A3B-Base` | `jobs/download_30b.sbatch` |
+| GRPO data / eval | `.../data/dapo-math-17k/dapo-math-17k.jsonl`, `.../data/aime-2024/aime-2024.jsonl` | same |
+| Megatron torch_dist (`--ref-load`) | `~/scratch_pi_lz484/wb379/ckpt/Qwen3-30B-A3B-Base_torch_dist` (57 GB) | `jobs/convert_30b.sbatch` |
+
+Conversion of the 30B model on **one** H200 (job 29263777, 18 min): HF → torch_dist → HF round trip, 18867/18867
+tensors bit-identical, logits diff 0. Download needs `--mem=64G` (16G was OOM-killed by hf_xet).
+
+**Launcher:** `jobs/lib/run_30b.sh {sft|grpo} RUN_DIR [extra train.py args]`, run inside the container. Settings via
+env vars (passed with `slime_exec env VAR=... bash jobs/lib/run_30b.sh ...` because of `--cleanenv`):
+`FREEZE_ROUTER=1`, `PROMPT_DATA`, `NUM_ROLLOUT`, `NUM_EPOCH`, `ROLLOUT_BS`, `N_SAMPLES`, `GLOBAL_BS`, `MAX_RESP_LEN`,
+`SAVE_INTERVAL`, `LR`, `MAX_TOKENS_PER_GPU`, `RAY_CPUS`, `RAY_OBJ_STORE_GB`. Parallelism follows slime's example
+(TP4/EP8 on 8 GPUs) and scales EP to the GPU count. Example job: `jobs/smoke_30b.sbatch`
+(`-p gpu_h200,gpu_b200 --gpus=8 -c 48 --mem=1000G`; GPU partitions allow at most 8 CPUs per GPU).
+
 ## 5. Problems found and fixes
 
 1. **Image pull stalled when `APPTAINER_TMPDIR` was on NFS scratch** (job 29229347: >50 min extracting, ~1 MB/s).
