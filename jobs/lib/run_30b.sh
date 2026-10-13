@@ -5,7 +5,7 @@
 #
 # usage: run_30b.sh {sft|grpo} RUN_DIR [extra train.py args...]
 # env:   NGPUS (default: visible GPUs), FREEZE_ROUTER=1, HF_CKPT, REF_LOAD, PROMPT_DATA,
-#        NUM_ROLLOUT, NUM_EPOCH, ROLLOUT_BS, N_SAMPLES, GLOBAL_BS, MAX_RESP_LEN, SAVE_INTERVAL, LR,
+#        NUM_ROLLOUT, NUM_EPOCH, ROLLOUT_BS, N_SAMPLES, GLOBAL_BS, MAX_RESP_LEN, SAVE_INTERVAL, LR, RM_TYPE,
 #        RAY_CPUS (default: SLURM_CPUS_PER_TASK), RAY_OBJ_STORE_GB (default 64)
 #        MODEL_ARGS_FILE   model config to source (default: slime's scripts/models/qwen3-30B-A3B.sh)
 #        TRAIN_ENTRY       driver script (default: slime's train.py), e.g. jobs/lib/sft_ckpt.py
@@ -71,7 +71,7 @@ elif [ "$MODE" = grpo ]; then
       --actor-num-nodes 1 --actor-num-gpus-per-node "$NGPUS" --colocate
       --prompt-data "${PROMPT_DATA:-$SCR/data/dapo-math-17k/dapo-math-17k.jsonl}"
       --input-key prompt --label-key label --apply-chat-template --rollout-shuffle
-      --rm-type deepscaler
+      --rm-type "${RM_TYPE:-deepscaler}"   # deepscaler scores 0 without </think>; base models: RM_TYPE=math/dapo/boxed_math
       --num-rollout "${NUM_ROLLOUT:-3000}" --rollout-batch-size "${ROLLOUT_BS:-32}"
       --n-samples-per-prompt "${N_SAMPLES:-8}" --rollout-max-response-len "${MAX_RESP_LEN:-8192}"
       --rollout-temperature 1 --global-batch-size "${GLOBAL_BS:-256}" --balance-data

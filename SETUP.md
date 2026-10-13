@@ -160,6 +160,20 @@ env vars (passed with `slime_exec env VAR=... bash jobs/lib/run_30b.sh ...` beca
 (TP4/EP8 on 8 GPUs) and scales EP to the GPU count. Example job: `jobs/smoke_30b.sbatch`
 (`-p gpu_h200,gpu_b200 --gpus=8 -c 48 --mem=1000G`; GPU partitions allow at most 8 CPUs per GPU).
 
+## 4c. 30B full-node smoke test (job 29263778, 8× H200, 2026-10-13, ~45 min)
+
+`jobs/smoke_30b.sbatch`, router frozen, on Qwen3-30B-A3B-Base:
+
+| Part | Result |
+|---|---|
+| SFT, 2 steps (TP4/EP8, CPU-offloaded Adam) | PASS: trains (loss 1.47 → 1.03); all 48 router weights bit-identical to base, attention changed; `--save-hf` export bit-identical to torch_dist → HF conversion (18,867/18,867 tensors) |
+| GRPO, 2 rollouts (SGLang colocated, 8 × 4 samples, ≤1024 tokens) | Mechanics PASS (rollout, train step, save, `--save-hf` identical), **but every reward was 0**, so advantages were 0 and the weights did not change |
+
+**Why the rewards were 0:** `--rm-type deepscaler` (slime's example default, used in `run_30b.sh grpo`) returns 0 unless the
+response contains `</think>`. A **base** model does not emit `<think>…</think>`, so GRPO on the raw base model with this
+reward learns nothing. For GRPO either start from a checkpoint that produces `<think>` (e.g. after the OpenR1 SFT), or use a
+reward that does not need it: `--rm-type math`, `dapo`, or `boxed_math` (grade only the `\boxed{}` answer).
+
 ## 5. Problems found and fixes
 
 1. **Image pull stalled when `APPTAINER_TMPDIR` was on NFS scratch** (job 29229347: >50 min extracting, ~1 MB/s).
