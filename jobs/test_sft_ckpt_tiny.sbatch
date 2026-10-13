@@ -15,7 +15,7 @@
 set -euo pipefail
 source jobs/slime_common.sh
 SFT_RUN=$SCR/verify/sft_ckpt_tiny
-source jobs/configs/sft_openr1_3001.sh
+source jobs/configs/sft_openr1_idx3k1.sh
 echo "host: $(hostname)  start: $(date)"
 TINY=$SCR/verify/router_freeze
 rm -rf "$SFT_RUN"   # outputs of a previous run of this test only

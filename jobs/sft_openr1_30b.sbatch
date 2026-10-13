@@ -7,15 +7,15 @@
 #SBATCH --mem=1000G
 #SBATCH -t 48:00:00
 #SBATCH --output=logs/%x_%j.out
-# SFT of Qwen3-30B-A3B-Base on the first 3001 rows of OpenR1-Math-220k (default/train), router NOT frozen.
-# Settings: jobs/configs/sft_openr1_3001.sh, documented in experiments/sft_openr1math_3001/SETTINGS.md.
+# SFT of Qwen3-30B-A3B-Base on OpenR1-Math-220k (default/train) rows iloc[1::3] (31,244), 1 epoch, router NOT frozen.
+# Settings: jobs/configs/sft_openr1_idx3k1.sh, documented in experiments/sft_openr1math_idx3k1/SETTINGS.md.
 # Checkpoints (jobs/lib/sft_ckpt.py), under $SFT_RUN:
 #   hf_ckpts/step_NNNNN/  10 weights-only bf16 HF checkpoints at log-spaced steps of the whole run
 #   ckpt/iter_NNNNNNN/    ONE full resumable Megatron checkpoint (near the job time limit, or at the end)
 # Resume: submit this same script again (it continues from ckpt/). STATUS says "done" or "needs_resume ...".
 set -euo pipefail
 source jobs/slime_common.sh
-source jobs/configs/sft_openr1_3001.sh
+source jobs/configs/sft_openr1_idx3k1.sh
 echo "host: $(hostname)  start: $(date)  job: $SLURM_JOB_ID"
 nvidia-smi --query-gpu=name,memory.total --format=csv
 
