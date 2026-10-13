@@ -54,7 +54,8 @@ Where the settings are recorded:
 | Objective | `--loss-type sft_loss` (token-level cross-entropy), `--calculate-per-token-loss` (mean over all trained tokens in the global batch) |
 | Epochs / steps | 1 epoch; `num_rollout = 31244 // 32 = 976` optimizer steps (31,232 samples); the last 12 samples of the shuffled order are not used |
 | Batch | global batch 32 sequences per optimizer step (`--rollout-batch-size 32 --global-batch-size 32`); sequences packed into micro-batches of ≤ 20480 tokens per GPU (`--use-dynamic-batch-size`) |
-| Sampling / order | one random permutation of the 31,244 rows: `random.Random(42 + 0).shuffle` (`--rollout-shuffle`, `--rollout-seed 42`), consumed in order, 32 per step; Megatron seed 1234 |
+| Token sampling / decoding | **not applicable**: SFT generates no text. The model is trained with teacher forcing on the dataset's assistant tokens; no SGLang engine is started (`--debug-train-only`). slime's decoding settings are therefore unused and left at their defaults (`--rollout-temperature 1.0`, `--rollout-top-p 1.0`, `--rollout-top-k -1`, eval settings unset; they also appear in `resolved_args.json`). Decoding only matters for GRPO rollouts and for evaluating the checkpoints, which have to be specified separately. |
+| Data sampling / order | one random permutation of the 31,244 rows: `random.Random(42 + 0).shuffle` (`--rollout-shuffle`, `--rollout-seed 42`), consumed in order, 32 per step; Megatron seed 1234 |
 | Optimizer | Adam (Megatron distributed optimizer; precision-aware, states on CPU: `--optimizer-cpu-offload --overlap-cpu-optimizer-d2h-h2d --use-precision-aware-optimizer`), β1 0.9, β2 0.95, ε 1e-8, weight decay 0.1, grad clip 1.0 |
 | LR schedule | peak 1e-5, linear warmup over 5% of steps (`--lr-warmup-fraction 0.05`), cosine decay to 1e-6 over all 976 steps (warmup ≈ 49 steps) |
 | Parallelism (8 GPUs) | TP 4 + sequence parallel, EP 8, PP 1, CP 1 → DP 2; full activation recompute (uniform, 1 layer) |
