@@ -7,19 +7,25 @@
 # env:   NGPUS (default: visible GPUs), FREEZE_ROUTER=1, HF_CKPT, REF_LOAD, PROMPT_DATA,
 #        NUM_ROLLOUT, NUM_EPOCH, ROLLOUT_BS, N_SAMPLES, GLOBAL_BS, MAX_RESP_LEN, SAVE_INTERVAL, LR,
 #        RAY_CPUS (default: SLURM_CPUS_PER_TASK), RAY_OBJ_STORE_GB (default 64)
+#        MODEL_ARGS_FILE   model config to source (default: slime's scripts/models/qwen3-30B-A3B.sh)
+#        TRAIN_ENTRY       driver script (default: slime's train.py), e.g. jobs/lib/sft_ckpt.py
+#        PASS_ENV          space-separated env var names forwarded to the Ray driver/actors
+#        DRY_RUN=1         only parse+validate the full argument list on CPU (no Ray, no GPU)
+# jobs/lib is added to PYTHONPATH of the Ray driver and actors, so hook modules there are importable.
 set -euo pipefail
 MODE=$1
 RUN=$2
 shift 2
+LIB_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
 SCR=${SCR:-$HOME/scratch_pi_lz484/$USER}
-NGPUS=${NGPUS:-$(nvidia-smi -L | wc -l)}
+NGPUS=${NGPUS:-$(nvidia-smi -L 2>/dev/null | wc -l)}
 HF_CKPT=${HF_CKPT:-$SCR/models/Qwen3-30B-A3B-Base}
 REF_LOAD=${REF_LOAD:-$SCR/ckpt/Qwen3-30B-A3B-Base_torch_dist}
 mkdir -p "$RUN"
 
 cd /root/slime
-source scripts/models/qwen3-30B-A3B.sh
+source "${MODEL_ARGS_FILE:-scripts/models/qwen3-30B-A3B.sh}"
 
 # Parallelism: the example uses TP4/EP8 on 8 GPUs. Scale EP with the GPU count (128 experts divide 1..8).
 TP=$(( NGPUS < 4 ? NGPUS : 4 ))
@@ -54,7 +60,7 @@ if [ "$MODE" = sft ]; then
       --actor-num-nodes 1 --actor-num-gpus-per-node "$NGPUS"
       --rollout-function-path slime.rollout.sft_rollout.generate_rollout
       --prompt-data "${PROMPT_DATA:?set PROMPT_DATA to a parquet/jsonl with a messages column}" --input-key messages
-      --rollout-shuffle --num-epoch "${NUM_EPOCH:-1}"
+      --rollout-shuffle --num-epoch "${NUM_EPOCH:-1}" ${NUM_ROLLOUT:+--num-rollout "$NUM_ROLLOUT"}
       --rollout-batch-size "${ROLLOUT_BS:-128}" --global-batch-size "${GLOBAL_BS:-128}"
       --loss-type sft_loss --calculate-per-token-loss
       --disable-compute-advantages-and-returns --debug-train-only
@@ -80,6 +86,42 @@ NVLINK_COUNT=$(nvidia-smi topo -m 2>/dev/null | grep -o 'NV[0-9][0-9]*' | wc -l 
 HAS_NVLINK=$(( NVLINK_COUNT > 0 ? 1 : 0 ))
 echo "MODE=$MODE NGPUS=$NGPUS TP=$TP EP=$EP HAS_NVLINK=$HAS_NVLINK FREEZE_ROUTER=${FREEZE_ROUTER:-0} RUN=$RUN"
 
+TRAIN_ARGS=(
+    "${MODEL_ARGS[@]}" "${CKPT_ARGS[@]}" "${MODE_ARGS[@]}" "${OPTIMIZER_ARGS[@]}"
+    "${PERF_ARGS[@]}" "${MISC_ARGS[@]}" "${FREEZE_ARGS[@]}" "$@"
+)
+printf '%s\n' "${TRAIN_ARGS[@]}" > "$RUN/train_args_$(date +%Y%m%d_%H%M%S).txt"
+
+if [ "${DRY_RUN:-0}" = 1 ]; then
+    echo "=== DRY_RUN: parsing and validating ${#TRAIN_ARGS[@]} arguments (no Ray, no GPU)"
+    PYTHONPATH="/root/Megatron-LM/:$LIB_DIR" python3 - "${TRAIN_ARGS[@]}" <<'PYEOF'
+import sys
+from slime.utils.arguments import parse_args
+args = parse_args()
+keys = ["num_epoch", "num_rollout", "rollout_batch_size", "global_batch_size", "micro_batch_size",
+        "lr", "min_lr", "lr_decay_style", "lr_warmup_fraction", "lr_warmup_iters", "weight_decay",
+        "adam_beta1", "adam_beta2", "adam_eps", "clip_grad", "optimizer", "loss_type", "loss_mask_type",
+        "calculate_per_token_loss", "rollout_shuffle", "rollout_seed", "seed", "max_tokens_per_gpu",
+        "tensor_model_parallel_size", "expert_model_parallel_size", "sequence_parallel", "bf16",
+        "save", "load", "ref_load", "hf_checkpoint", "save_hf", "no_save_optim", "custom_megatron_init_path",
+        "freeze_params_name_list", "seq_length", "max_position_embeddings"]
+for k in keys:
+    print(f"  {k} = {getattr(args, k, '<unset>')}")
+print("DRY_RUN OK")
+PYEOF
+    exit 0
+fi
+
+RUNTIME_ENV_JSON=$(LIB_DIR="$LIB_DIR" HAS_NVLINK="$HAS_NVLINK" python3 -c '
+import json, os
+env = {"PYTHONPATH": "/root/Megatron-LM/:" + os.environ["LIB_DIR"],
+       "CUDA_DEVICE_MAX_CONNECTIONS": "1", "NCCL_NVLS_ENABLE": os.environ["HAS_NVLINK"]}
+for name in os.environ.get("PASS_ENV", "").split():
+    if name in os.environ:
+        env[name] = os.environ[name]
+print(json.dumps({"env_vars": env}))')
+echo "runtime env: $RUNTIME_ENV_JSON"
+
 RAY_PORT=$((20000 + SLURM_JOB_ID % 5000))
 DASH_PORT=$((RAY_PORT + 1))
 export no_proxy=127.0.0.1
@@ -90,7 +132,5 @@ ray start --head --node-ip-address 127.0.0.1 --port "$RAY_PORT" --dashboard-port
 trap 'ray stop --force || true' EXIT
 
 ray job submit --address="http://127.0.0.1:$DASH_PORT" \
-    --runtime-env-json="{\"env_vars\": {\"PYTHONPATH\": \"/root/Megatron-LM/\", \"CUDA_DEVICE_MAX_CONNECTIONS\": \"1\", \"NCCL_NVLS_ENABLE\": \"$HAS_NVLINK\"}}" \
-    -- python3 train.py \
-    "${MODEL_ARGS[@]}" "${CKPT_ARGS[@]}" "${MODE_ARGS[@]}" "${OPTIMIZER_ARGS[@]}" \
-    "${PERF_ARGS[@]}" "${MISC_ARGS[@]}" "${FREEZE_ARGS[@]}" "$@"
+    --runtime-env-json="$RUNTIME_ENV_JSON" \
+    -- python3 "${TRAIN_ENTRY:-train.py}" "${TRAIN_ARGS[@]}"
