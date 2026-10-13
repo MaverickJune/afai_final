@@ -25,7 +25,7 @@ describe() {   # $1 = command path from squeue/sacct, $2 = job name
     if [ "$name" = interactive ]; then echo "interactive session (salloc / VS Code)"; return; fi
     for f in "$cmd" "$PROJ/jobs/$name.sbatch" "$PROJ/jobs/${name%_b200}.sbatch"; do
         if [ -f "$f" ] && [[ "$f" == *.sbatch ]]; then
-            grep -m1 -E '^# [^ ]' "$f" | sed 's/^# //' | cut -c1-90
+            grep -m1 -E '^# [^ ]' "$f" | sed 's/^# //' | cut -c1-100
             return
         fi
     done
@@ -59,6 +59,7 @@ list() {
         local when
         if [ "$st" = RUNNING ]; then when="left $left"
         elif [ "$start" != N/A ] && [ -n "$start" ]; then when="start ${start/T/ }"; when=${when:0:22}
+        elif [[ "$reason" == Dependency* ]]; then when="after dependency"
         else when="start ?"; fi
         printf "%-9s %-20s %-8s %-11s %-5s %-25s %-17s %s\n" "$id" "${name:0:20}" "${st:0:8}" "${part:0:11}" "$gpus" "$el / $lim" "$when" "$(describe "$cmd" "$name")"
         local why; why=$(human_reason "$reason")

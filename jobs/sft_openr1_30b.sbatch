@@ -7,7 +7,8 @@
 #SBATCH --mem=1000G
 #SBATCH -t 48:00:00
 #SBATCH --output=logs/%x_%j.out
-# SFT of Qwen3-30B-A3B-Base on OpenR1-Math-220k (default/train) rows iloc[1::3] (31,244), 1 epoch, router NOT frozen.
+# Qwen3-30B-A3B-Base SFT, OpenR1-Math rows 1,4,7,.. (31,244), 1 epoch, router trained
+# (dataset: open-r1/OpenR1-Math-220k default/train, pandas iloc[1::3]).
 # Settings: jobs/configs/sft_openr1_idx3k1.sh, documented in experiments/sft_openr1math_idx3k1/SETTINGS.md.
 # Checkpoints (jobs/lib/sft_ckpt.py), under $SFT_RUN:
 #   hf_ckpts/step_NNNNN/  10 weights-only bf16 HF checkpoints at log-spaced steps of the whole run
