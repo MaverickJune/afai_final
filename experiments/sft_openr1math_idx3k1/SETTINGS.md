@@ -61,6 +61,24 @@ Where the settings are recorded:
 | Parallelism (8 GPUs) | TP 4 + sequence parallel, EP 8, PP 1, CP 1 → DP 2; full activation recompute (uniform, 1 layer) |
 | Hardware | 1 node, 8× H200 or 8× B200 (`-p gpu_h200,gpu_b200`), 48 CPUs, 1000 GB RAM |
 
+## Key defaults (from `resolved_args.json`, 1039 values; nothing below is set explicitly)
+
+| | |
+|---|---|
+| Optimizer internals | Adam ε 1e-8; distributed optimizer; fp32 master params, fp32 main grads, fp32 Adam moments (`exp_avg`, `exp_avg_sq`); bf16 model params |
+| Seeds | Megatron `--seed 1234`, data `--rollout-seed 42` |
+| MoE | router softmax top-8 in fp32; load-balancing type `aux_loss` but coefficient 0 (no aux loss); no z-loss |
+| Init | `init_method_std 0.02` (irrelevant: all weights loaded from the base model) |
+| `seq_length` / `max_position_embeddings` | 4096 (Megatron default) **but unused here**: RoPE length is computed from each packed batch's real max sequence length (`get_rotary_seq_len` uses `packed_seq_params.max_seqlen`), and there are no learned position embeddings. Samples up to 22,169 tokens train at full length (also exercised by the tiny test on the real data). |
+| Decoding | `rollout_temperature 1.0`, `rollout_top_p 1.0`, `rollout_top_k -1` — unused in SFT (see above) |
+
+## Validation done before the 30B run
+
+`jobs/test_sft_ckpt_tiny.sbatch` (job 29366120, PASS): dry run of this exact 30B argument list with full slime/Megatron
+validation on a GPU; then, on a tiny Qwen3-MoE with the real data and the same config: HF saves at the log-spaced steps,
+forced full save + clean stop at step 3, resume at step 4 (optimizer/scheduler/RNG/data cursor restored), final
+HF + full save, old full checkpoint pruned, HF export bit-identical to the full checkpoint, router weights trained.
+
 ## Checkpoints (`$SFT_RUN = $SCR/runs/sft_openr1math_idx3k1_qwen3_30b_a3b_base`)
 
 | What | Where | When |
