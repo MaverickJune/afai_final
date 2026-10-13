@@ -154,6 +154,15 @@ def main():
     assert args.custom_megatron_init_path == "sft_ckpt.actor_init"
     (_ckpt_dir() / "save_requests").mkdir(parents=True, exist_ok=True)
     (_ckpt_dir() / "hf_ckpts").mkdir(parents=True, exist_ok=True)
+    # Every resolved argument of this launch, including slime/Megatron defaults. (num_rollout is derived from
+    # num_epoch later at startup; its final value is in ckpt_log.jsonl "schedule".)
+    dump = _ckpt_dir() / f"resolved_args_{os.environ.get('SLURM_JOB_ID', 'nojob')}_{time.strftime('%Y%m%d_%H%M%S')}.json"
+    text = json.dumps(vars(args), indent=1, sort_keys=True, default=str)
+    dump.write_text(text)
+    proj_logs = Path(__file__).resolve().parents[2] / "logs"  # copy readable next to the job logs
+    if proj_logs.is_dir():
+        (proj_logs / f"resolved_args_{_ckpt_dir().name}_{dump.name.split('_', 2)[2]}").write_text(text)
+    print(f"[sft_ckpt] full resolved arguments -> {dump}", flush=True)
 
     sched = _Schedule()
     orig_save_checkpoint = slime_train.save_checkpoint

@@ -1,8 +1,16 @@
 # SFT: Qwen3-30B-A3B-Base on OpenR1-Math-220k, every third row (0-based 1, 4, 7, ...), 1 epoch
 
 Single source of truth for the values: `jobs/configs/sft_openr1_idx3k1.sh` (+ defaults in `jobs/lib/run_30b.sh`).
-Exact argument list of every launch: `$SFT_RUN/train_args_<timestamp>.txt`. Full resolved config: slime prints all
-arguments at the top of the job log.
+
+Where the settings are recorded:
+
+| File | Contents |
+|---|---|
+| this file | the training-relevant settings in words, incl. the important defaults |
+| `resolved_args.json` (this folder) | **every** resolved argument incl. all slime / Megatron / TransformerEngine defaults, from the CPU dry run of the exact launch command (`num_rollout` is derived at startup: 976) |
+| `$SFT_RUN/train_args_<timestamp>.txt` | the explicit command-line arguments of each launch |
+| `$SFT_RUN/resolved_args_<jobid>_<timestamp>.json` | every resolved argument of each real launch (copy in `logs/resolved_args_*`) |
+| job log `logs/sft_openr1_30b_<jobid>.out` | slime/Megatron also print all arguments at startup |
 
 ## How to reproduce (other account, own node)
 

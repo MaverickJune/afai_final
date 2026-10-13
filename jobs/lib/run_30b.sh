@@ -10,7 +10,8 @@
 #        MODEL_ARGS_FILE   model config to source (default: slime's scripts/models/qwen3-30B-A3B.sh)
 #        TRAIN_ENTRY       driver script (default: slime's train.py), e.g. jobs/lib/sft_ckpt.py
 #        PASS_ENV          space-separated env var names forwarded to the Ray driver/actors
-#        DRY_RUN=1         only parse+validate the full argument list on CPU (no Ray, no GPU)
+#        DRY_RUN=1         only parse+validate the full argument list on CPU (no Ray, no GPU);
+#                          DRY_RUN_ARGS_JSON=<file> also writes every resolved argument (incl. defaults)
 # jobs/lib is added to PYTHONPATH of the Ray driver and actors, so hook modules there are importable.
 set -euo pipefail
 MODE=$1
@@ -94,6 +95,8 @@ printf '%s\n' "${TRAIN_ARGS[@]}" > "$RUN/train_args_$(date +%Y%m%d_%H%M%S).txt"
 
 if [ "${DRY_RUN:-0}" = 1 ]; then
     echo "=== DRY_RUN: parsing and validating ${#TRAIN_ARGS[@]} arguments (no Ray, no GPU)"
+    # Default dump location: the project's logs/ (readable without scratch access).
+    export DRY_RUN_ARGS_JSON=${DRY_RUN_ARGS_JSON:-$(cd "$LIB_DIR/../.." && pwd)/logs/resolved_args_dryrun_$(basename "$RUN").json}
     PYTHONPATH="/root/Megatron-LM/:$LIB_DIR" python3 - "${TRAIN_ARGS[@]}" <<'PYEOF'
 import sys
 import torch
@@ -111,6 +114,12 @@ keys = ["num_epoch", "num_rollout", "rollout_batch_size", "global_batch_size", "
         "freeze_params_name_list", "seq_length", "max_position_embeddings"]
 for k in keys:
     print(f"  {k} = {getattr(args, k, '<unset>')}")
+import json, os
+out = os.environ.get("DRY_RUN_ARGS_JSON")
+if out:
+    with open(out, "w") as f:
+        json.dump(vars(args), f, indent=1, sort_keys=True, default=str)
+    print(f"full resolved arguments ({len(vars(args))} incl. defaults) -> {out}")
 print("DRY_RUN OK")
 PYEOF
     exit 0

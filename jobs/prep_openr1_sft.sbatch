@@ -27,5 +27,8 @@ for t, n in [(6, 3), (5, 10), (1000, 10)]:
 "
 
 echo "=== [4] DRY_RUN of the exact training arguments"
-slime_exec env "${SFT_ENV[@]}" NGPUS=8 DRY_RUN=1 bash jobs/lib/run_30b.sh sft "$SFT_RUN" "${SFT_ARGS[@]}"
+# Also saves every resolved argument (incl. slime/Megatron/TE defaults) into the repo for the settings log.
+slime_exec env "${SFT_ENV[@]}" NGPUS=8 DRY_RUN=1 \
+    DRY_RUN_ARGS_JSON="$PWD/experiments/sft_openr1math_idx3k1/resolved_args.json" \
+    bash jobs/lib/run_30b.sh sft "$SFT_RUN" "${SFT_ARGS[@]}"
 echo "end: $(date)"
