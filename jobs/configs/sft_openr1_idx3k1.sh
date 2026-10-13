@@ -17,7 +17,7 @@ SFT_ENV=(
     NUM_EPOCH=1
     ROLLOUT_BS=32 GLOBAL_BS=32            # 1 optimizer step per rollout; 31244 // 32 = 976 steps (1 epoch)
     LR=1e-5
-    MAX_TOKENS_PER_GPU=${SFT_MAX_TOKENS_PER_GPU:-20480}
+    MAX_TOKENS_PER_GPU=${SFT_MAX_TOKENS_PER_GPU:-24576}   # >= longest sample (22,169 tokens): no truncation
     SAVE_INTERVAL=1                       # sft_ckpt.py decides what to save at each step
     TRAIN_ENTRY="$PWD/jobs/lib/sft_ckpt.py"
     SFT_CKPT_DIR="$SFT_RUN"

@@ -10,6 +10,8 @@
 # Qwen3-MoE from verify_router_freeze and the REAL prepared OpenR1 data, with the same config file as the 30B run.
 #   phase A: 6-step run, forced full save + stop after step 3   (= the time-limit path)
 #   phase B: same command again -> resumes at step 4, runs to step 6, final full save
+# Step 0 also dry-runs the real 30B argument list and saves every resolved argument to
+# experiments/sft_openr1math_idx3k1/resolved_args.json.
 # Checks: STATUS, one full checkpoint left, HF checkpoints at the log-spaced steps {1, 2, 6},
 #         resumed start step, HF export == torch_dist->HF conversion of the final full checkpoint.
 set -euo pipefail
@@ -17,6 +19,16 @@ source jobs/slime_common.sh
 SFT_RUN=$SCR/verify/sft_ckpt_tiny
 source jobs/configs/sft_openr1_idx3k1.sh
 echo "host: $(hostname)  start: $(date)"
+
+echo "=== [0] DRY_RUN of the REAL 30B launch arguments (parse + full slime/Megatron validation on this GPU node)"
+(
+    unset SFT_RUN
+    source jobs/configs/sft_openr1_idx3k1.sh
+    slime_exec env "${SFT_ENV[@]}" NGPUS=8 DRY_RUN=1 \
+        DRY_RUN_ARGS_JSON="$PWD/experiments/sft_openr1math_idx3k1/resolved_args.json" \
+        bash jobs/lib/run_30b.sh sft "$SFT_RUN" "${SFT_ARGS[@]}"
+)
+
 TINY=$SCR/verify/router_freeze
 rm -rf "$SFT_RUN"   # outputs of a previous run of this test only
 mkdir -p "$SFT_RUN"
