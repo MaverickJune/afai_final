@@ -96,6 +96,10 @@ if [ "${DRY_RUN:-0}" = 1 ]; then
     echo "=== DRY_RUN: parsing and validating ${#TRAIN_ARGS[@]} arguments (no Ray, no GPU)"
     PYTHONPATH="/root/Megatron-LM/:$LIB_DIR" python3 - "${TRAIN_ARGS[@]}" <<'PYEOF'
 import sys
+import torch
+# Megatron's validate_args queries the GPU's compute capability; on a CPU node pretend sm_90 (H100/H200).
+if not torch.cuda.is_available():
+    torch.cuda.get_device_capability = lambda *a, **k: (9, 0)
 from slime.utils.arguments import parse_args
 args = parse_args()
 keys = ["num_epoch", "num_rollout", "rollout_batch_size", "global_batch_size", "micro_batch_size",
