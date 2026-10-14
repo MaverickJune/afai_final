@@ -67,12 +67,16 @@ if [ "$MODE" = sft ]; then
       --disable-compute-advantages-and-returns --debug-train-only
    )
 elif [ "$MODE" = grpo ]; then
+   # Length: NUM_ROLLOUT steps, or NUM_EPOCH passes over PROMPT_DATA (slime ignores --num-epoch when --num-rollout
+   # is set). Neither set: 3000 steps, as in slime's example.
+   if [ -z "${NUM_EPOCH:-}" ]; then NUM_ROLLOUT=${NUM_ROLLOUT:-3000}; fi
    MODE_ARGS=(
       --actor-num-nodes 1 --actor-num-gpus-per-node "$NGPUS" --colocate
       --prompt-data "${PROMPT_DATA:-$SCR/data/dapo-math-17k/dapo-math-17k.jsonl}"
       --input-key prompt --label-key label --apply-chat-template --rollout-shuffle
       --rm-type deepscaler
-      --num-rollout "${NUM_ROLLOUT:-3000}" --rollout-batch-size "${ROLLOUT_BS:-32}"
+      ${NUM_EPOCH:+--num-epoch "$NUM_EPOCH"} ${NUM_ROLLOUT:+--num-rollout "$NUM_ROLLOUT"}
+      --rollout-batch-size "${ROLLOUT_BS:-32}"
       --n-samples-per-prompt "${N_SAMPLES:-8}" --rollout-max-response-len "${MAX_RESP_LEN:-8192}"
       --rollout-temperature 1 --global-batch-size "${GLOBAL_BS:-256}" --balance-data
       --advantage-estimator grpo --use-kl-loss --kl-loss-coef 0.00 --kl-loss-type low_var_kl

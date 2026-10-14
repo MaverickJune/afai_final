@@ -9,6 +9,7 @@
 #   ./jobstat.sh hist  [DAYS]    finished/failed/cancelled jobs of the last DAYS days (default 2), with exit codes
 #   ./jobstat.sh eff   JOBID     CPU / memory efficiency of a finished job (seff)
 #   ./jobstat.sh sft             progress of the OpenR1 SFT run: steps done / 976, loss, step time, ETA, checkpoints
+#   ./jobstat.sh grpo            progress of the OpenR1 GRPO run: steps done / 976, reward, step time, ETA, checkpoints
 #   ./jobstat.sh watch [SEC]     refresh the job list every SEC seconds (default 60; Ctrl-C to stop)
 #
 # Cancel a job yourself with:  scancel JOBID
@@ -18,6 +19,8 @@ LOGS=$PROJ/logs
 SCR=${SCR:-$HOME/scratch_pi_lz484/$USER}
 SFT_RUN=${SFT_RUN:-$SCR/runs/sft_openr1math_idx3k1_qwen3_30b_a3b_base}
 SFT_TOTAL_STEPS=976
+GRPO_RUN=${GRPO_RUN:-$SCR/runs/grpo_openr1math_idx3k0_qwen3_30b_a3b_base}
+GRPO_TOTAL_STEPS=976
 
 # One-line description of a job: first comment line after the #SBATCH header of its script.
 describe() {   # $1 = command path from squeue/sacct, $2 = job name
@@ -118,8 +121,40 @@ case "${1:-list}" in
         ls "$SFT_RUN/hf_ckpts" 2>/dev/null | sed 's/^/  HF weights-only: /'
         ls -d "$SFT_RUN"/ckpt/iter_* 2>/dev/null | sed 's/^/  full resumable:  /'
         [ -f "$SFT_RUN/ckpt_log.jsonl" ] && { echo "--- last save events"; tail -n 3 "$SFT_RUN/ckpt_log.jsonl"; }; true ;;
+    grpo)
+        echo "run dir: $GRPO_RUN"
+        echo "STATUS:  $(cat "$GRPO_RUN/STATUS" 2>/dev/null || echo 'not finished / not started')"
+        [ -f "$GRPO_RUN/jobs.log" ] && { echo "--- Slurm jobs of this run"; cat "$GRPO_RUN/jobs.log"; }
+        f=$(ls -t "$LOGS"/grpo_openr1_30b_*.out 2>/dev/null | head -1)
+        if [ -n "$f" ]; then
+            echo "--- latest log: ${f#$PROJ/}"
+            # training-side metrics, one line per step: "[time] train_metric_utils.py:N - rollout ID: {... raw_reward ...}",
+            # logged after step ID+1's samples are generated and graded, before its optimizer update
+            grep -oE "\[[0-9-]+ [0-9:]+\] [a-z_]+\.py:[0-9]+ - rollout [0-9]+: \{.*" "$f" | \
+            awk -v total=$GRPO_TOTAL_STEPS '
+                { cmd = "date -d \"" substr($0, 2, 19) "\" +%s"; cmd | getline t; close(cmd)
+                  match($0, / - rollout [0-9]+: /); id = substr($0, RSTART + 11, RLENGTH - 13) + 0
+                  r = "n/a"; if (match($0, /raw_reward.: [-0-9.e+]+/)) r = substr($0, RSTART + 13, RLENGTH - 13)
+                  n++; ts[n] = t; st[n] = id; rw[n] = r }
+                END {
+                    if (n == 0) { print "no training steps logged yet"; exit }
+                    k = (n > 20 ? 20 : n - 1)
+                    printf "steps done: %d / %d (step %d training)   mean reward (step %d samples): %s\n", st[n], total, st[n] + 1, st[n] + 1, rw[n]
+                    printf "recent mean rewards (by step):"; for (i = (n > 5 ? n - 4 : 1); i <= n; i++) printf " %s", rw[i]; print ""
+                    if (k > 0) {
+                        dt = (ts[n] - ts[n - k]) / k; left = (total - st[n]) * dt
+                        printf "avg step time (last %d): %.0f s   ETA for remaining %d steps: %.1f h (excl. saves/requeue)\n", k, dt, total - st[n], left / 3600
+                    }
+                }'
+        else
+            echo "no grpo_openr1_30b log yet"
+        fi
+        echo "--- checkpoints"
+        ls "$GRPO_RUN/hf_ckpts" 2>/dev/null | sed 's/^/  HF weights-only: /'
+        ls -d "$GRPO_RUN"/ckpt/iter_* 2>/dev/null | sed 's/^/  full resumable:  /'
+        [ -f "$GRPO_RUN/ckpt_log.jsonl" ] && { echo "--- last save events"; tail -n 3 "$GRPO_RUN/ckpt_log.jsonl"; }; true ;;
     watch)
         while true; do clear; date; list; sleep "${2:-60}"; done ;;
-    -h|--help|help) sed -n '2,15p' "${BASH_SOURCE[0]}" ;;
-    *) echo "unknown command '$1'"; sed -n '2,15p' "${BASH_SOURCE[0]}"; exit 1 ;;
+    -h|--help|help) sed -n '2,16p' "${BASH_SOURCE[0]}" ;;
+    *) echo "unknown command '$1'"; sed -n '2,16p' "${BASH_SOURCE[0]}"; exit 1 ;;
 esac
