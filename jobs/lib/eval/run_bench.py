@@ -41,6 +41,8 @@ MC_INSTR = ("Answer the following multiple-choice question. Please reason step b
 BENCH_CFG = {
     "math500":      {"n": 4,  "max_new": 30000},
     "aime24":       {"n": 16, "max_new": 30000},
+    "aime26":       {"n": 16, "max_new": 30000},
+    "hmmt_feb26":   {"n": 16, "max_new": 30000},
     "gsm8k":        {"n": 1,  "max_new": 16384},
     "gpqa_diamond": {"n": 4,  "max_new": 30000},
     "mmlu":         {"n": 1,  "max_new": 16384},

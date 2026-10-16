@@ -9,7 +9,8 @@
 # Mechanics test on the real 30B models, 1 H200 (not an accuracy measurement):
 #   1) SGLang serves the final SFT checkpoint; run_bench on 3 questions of every benchmark, responses capped at
 #      2048 tokens -> summaries written, prompts/stop tokens/grading visible in the log
-#   2) kl_math500 with base + final SFT checkpoint on one GPU (memory check), 3 problems
+#   2) probe_analysis (KL + routing) with base + final SFT checkpoint on one GPU (memory, router hooks on all 48
+#      layers), 3 sequences per probe set
 set -euo pipefail
 source jobs/slime_common.sh
 source jobs/configs/eval.sh
@@ -42,9 +43,11 @@ done
 kill $SERVER_PID 2>/dev/null || true; wait $SERVER_PID 2>/dev/null || true
 sleep 10; nvidia-smi --query-gpu=memory.used --format=csv
 
-echo "=== [2] KL: base + final SFT checkpoint on one GPU, 3 problems"
+echo "=== [2] probes: base + final SFT checkpoint on one GPU, 3 sequences per probe"
 set +u; activate_afai_env; set -u
-python jobs/lib/eval/kl_math500.py --base "$BASE_HF" --data "$BENCH_DIR/math500.jsonl" --out "$OUT/kl" --limit 3 \
+python jobs/lib/eval/probe_analysis.py --ref "$BASE_HF" --probe-dir "$BENCH_DIR/probes" --out "$OUT/probe" --limit 3 \
     --ckpt sft_final="$SFT_FINAL"
+python -c "import torch; print('peak GPU memory', torch.cuda.max_memory_allocated() / 1e9)" || true
+head -5 "$OUT/probe/routing.csv"
 echo "EVAL 30B TEST: finished (check the numbers above)"
 echo "end: $(date)"

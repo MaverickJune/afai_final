@@ -1,79 +1,110 @@
-# Evaluation of the post-trained Qwen3-30B-A3B models
+# Evaluation plan: SFT vs RL effects inside Qwen3-30B-A3B
 
-Follows the analysis of *Scalpel vs. Hammer: GRPO Amplifies Existing Capabilities, SFT Replaces Them*
-(Rajani et al., ICML 2025, `scalpel_happer.pdf`), applied to our runs: Qwen3-30B-A3B-Base, SFT on OpenR1-Math rows
-`iloc[1::3]` (`experiments/sft_openr1math_idx3k1/`) and GRPO on rows `iloc[0::3]` (`experiments/grpo_openr1math_idx3k0/`).
-Everything below runs now for **base vs. SFT** and is re-run unchanged for GRPO when that run finishes.
+Project: *Disentangle SFT and RL Effects in Mixture of Experts Models* (`5880ProjectProposal.pdf`). Main question:
+how SFT and GRPO change the MoE model's parameters, experts and routing, and how those changes relate to
+capability gains and losses. Method baseline: *Scalpel vs. Hammer* (Rajani et al. 2025, `scalpel_happer.pdf`).
 
-Code: `jobs/lib/eval/`. Paths: `jobs/configs/eval.sh`. Outputs: `$SCR/eval/`; small summaries are copied to
-`experiments/eval/results/`.
+Runs to analyse (registry: `run_info` in `jobs/configs/eval.sh`; each run is measured against the model its stage
+started from, and `REF_OVERRIDE=$BASE_HF` gives the cumulative change since the base model):
 
-## A. Benchmarks (paper Sec. 3.3, Fig. 3): does training help in-domain and hurt out-of-domain?
+| Run | Reference | Status |
+|---|---|---|
+| `sft`: SFT on OpenR1 rows `iloc[1::3]` | base | done (job 29366121) |
+| `grpo`: GRPO on rows `iloc[0::3]` | base | colleague's run |
+| SFT → GRPO, GRPO → SFT (second stages) | final checkpoint of stage 1 | to add when run |
+| router-frozen ablations | same as their unfrozen counterpart | to add when run |
 
-| Benchmark | Domain | Questions | Samples/question | Max response tokens | Grading |
-|---|---|---|---|---|---|
-| MATH-500 | math, in-domain | 500 | 4 | 30,000 | slime `math` grader (last `\boxed{}` vs answer; MATH normalisation / sympy) = the GRPO reward |
-| AIME 2024 | hard math | 30 | 16 | 30,000 | same |
-| GSM8K (test) | easy math | 1,319 | 1 | 16,384 | same |
-| GPQA-Diamond | science MC, reasoning + knowledge | 198 | 4 | 30,000 | option letter in `\boxed{}` (fallback "answer is (X)") |
-| MMLU (test) | knowledge MC | 14,042 | 1 | 16,384 | same |
-| MMLU-Pro (test) | harder knowledge MC, 10 options | 12,032 | 1 | 16,384 | same |
+Rows `iloc[2::3]` are never trained on and provide the held-out probe text.
 
-- Models: base (`Qwen3-30B-A3B-Base`), SFT final (`step_00976`), later GRPO final. The script also takes any
-  intermediate checkpoint.
-- Prompt (identical tokens for every model, base chat template, zero-shot): math = *"Please reason step by step, and
-  put your final answer within \boxed{}."* + problem, which is the GRPO prompt and the instruction R1 used for the SFT data. MC = the
-  same instruction asking for the option letter, then question and `A) ...` options. GPQA options are shuffled once with a
-  fixed per-question seed.
-- Decoding: temperature 0.6, top-p 0.95, no top-k (the DeepSeek-R1 / Qwen3 evaluation setting; the paper reused its
-  training temperature 0.7). Stop at `<|im_end|>` or `<|endoftext|>`. SGLang, bf16, 1 H200 per model.
-- Reported per benchmark: accuracy = mean over all samples (avg@n), 95% CI over questions, pass@1/4/n
-  (whether a correct answer is reachable at all, which connects to "GRPO amplifies, SFT replaces"), truncation rate, no-answer rate,
-  mean response length, and accuracy per subject / category (MMLU subjects, MMLU-Pro categories, GPQA domains,
-  MATH subjects). The categories show *which* knowledge degrades.
-- Differences from the paper: IFEval is not included (its instruction checkers are not installed; can be added). The base
-  model is evaluated zero-shot with the chat template like the trained models, so its scores measure the same
-  prompt format rather than its best few-shot score. A low base score on format alone shows up as a high
-  no-answer rate.
+Code: `jobs/lib/eval/`. Outputs: `$SCR/eval/`; small CSV/JSON summaries are copied to `experiments/eval/results/`.
 
-## B. Output-distribution drift (paper Sec. 4.1, Fig. 4): KL(base ‖ checkpoint) over training
+## 1. Parameter change: where do SFT and RL write? (`eval_param_diff.sbatch`, CPU)
 
-- Teacher forcing on held-out text: the 500 MATH-500 problems with their reference solutions, formatted as one chat turn
-  (same prompt as A, then solution + `<|im_end|>`). Per solution token, the full-vocabulary
-  KL(p_base ‖ p_ckpt) (the paper's direction) and the reverse direction, in fp32, averaged token-weighted and per question.
-- For each of the 10 saved SFT checkpoints (steps 1, 2, 5, 10, 21, 46, 98, 211, 454, 976) → a KL-vs-step curve. The GRPO
-  run saves at the same steps, so the two curves can be compared directly.
-- Base model and one checkpoint on one H200 (2 × 57 GB bf16).
+For each saved checkpoint and each weight tensor: relative change ‖W − W_ref‖_F / ‖W_ref‖_F (the paper's normalised
+Frobenius norm) and RMS change per entry, in fp32. Per (layer, module): attention q/k/v/o, q/k norms, **router**,
+experts gate/up/down pooled over the 128 experts. A **per-expert** table is also written (48 × 128 experts).
 
-## C. Parameter-level change (paper Sec. 4.2, Figs. 5–6), extended to MoE
+Answers: magnitude SFT vs RL; which layers and modules change most (do q/k dominate as in the paper? mid-layer
+experts for SFT?); how the change grows over training (10 log-spaced checkpoints: steps 1, 2, 5, … 976).
 
-- For every weight tensor and checkpoint: relative change ‖W_ckpt − W_base‖_F / ‖W_base‖_F (the paper's normalised
-  Frobenius norm) and RMS change ‖ΔW‖_F / √numel. Computed in fp32 and streamed from safetensors on CPU.
-- Aggregated per (layer, module): attention q/k/v/o, q_norm/k_norm, **router** (`mlp.gate`), experts gate/up/down
-  pooled over the 128 experts, plus a per-expert table (which experts moved), layer norms, embeddings, LM head.
-- Questions: do q/k change most, as in the paper? Are mid-layer expert MLPs changed more by SFT than by GRPO? How much does the
-  router move? That last one is specific to MoE and relates to our router-freezing setup.
+## 2. Routing change: do experts get chosen differently, and why? (`eval_probe.sbatch`, 1 H200)
+
+Teacher forcing on fixed probe text, reference model and checkpoint on the same tokens. Probes:
+
+| Probe | Text | Purpose |
+|---|---|---|
+| `openr1_heldout` | 300 held-out OpenR1 rows (`iloc[2::3]`), R1 solution incl. `<think>` trace (≤ 4096 tokens) | in-distribution math |
+| `math500` | 500 MATH-500 problems + human reference solutions | the paper's KL probe, comparability |
+| `general` | 300 MMLU questions (the question text itself) | non-math text |
+
+A hook on every layer's router recomputes its top-8 choice (fp32) per token:
+R = reference router on reference inputs, C = checkpoint router on checkpoint inputs,
+F = **reference** router on **checkpoint** inputs (counterfactual). Per layer and probe:
+
+- `overlap_total` = |C ∩ R| / 8: how much routing changed
+- `overlap_inputs` = |F ∩ R| / 8: change caused by drifted hidden states alone
+- `overlap_router` = |C ∩ F| / 8: change caused by the router weights alone (exactly 1 with a frozen router)
+- expert load per expert (reference and checkpoint) and its Jensen-Shannon divergence
+
+This split is what the router-freezing ablation needs: a frozen router can still route differently through its inputs,
+and the decomposition shows which effect dominates in SFT vs RL.
+
+Also in the same pass: **KL(ref ‖ ckpt)** per token (paper Sec. 4.1) and the reverse direction, per probe → output-drift
+curves over training, math vs general text.
+
+## 3. Expert specialization: are updates localized? (`eval_specialization.sbatch`, CPU)
+
+Math affinity of each expert in the reference model = log(share of math-probe tokens) − log(share of general-probe
+tokens). Per checkpoint and layer: rank correlation between affinity and the expert's update size, share of update
+energy in the 10% most math-affine experts (0.10 = no preference), Gini of update energy over experts
+(spread vs localized), and max/median update. This answers the proposal's "distributed across experts vs
+localized to math experts", separately for SFT and RL.
+
+## 4. Benchmarks: how the internal changes show up in capability (`eval_bench.sbatch`, 1 H200 per model)
+
+| Benchmark | Role | Questions | Samples | Grading |
+|---|---|---|---|---|
+| AIME 2026, HMMT Feb 2026 | math, after the Qwen3 release (no contamination) | 30, ~30 | 16 | slime `math` grader (= GRPO reward) |
+| MATH-500, GSM8K | math, comparability with the paper | 500, 1,319 | 4, 1 | same |
+| AIME 2024 | math (possibly contaminated), optional | 30 | 16 | same |
+| GPQA-Diamond | science reasoning + knowledge | 198 | 4 | option letter in `\boxed{}` |
+| MMLU, MMLU-Pro | general knowledge (forgetting) | 14,042, 12,032 | 1 | same |
+
+Zero-shot, base chat template, identical prompt tokens for all models; math prompt = the GRPO / R1 instruction.
+Temperature 0.6, top-p 0.95, ≤ 30k tokens (16k for GSM8K / MMLU / MMLU-Pro). Reported: accuracy (avg@n) with 95% CI,
+pass@1/4/n, truncation and no-answer rates, response length, and per-subject accuracy (which knowledge is lost).
+Models: base, final checkpoint of each run (any intermediate checkpoint also works).
+
+Not included: USAMO 2026, which is proof-based and needs human or LLM-judge grading. IFEval needs checkers that are
+not installed and can be added. AIME 2026 / HMMT Feb 2026 come from MathArena's Hub copies; the prep job reports it
+if those repos are named differently.
+
+## Checkpoints
+
+The proposal mentions ~20 checkpoints. The runs save 10 log-spaced ones, which are dense early, where SFT changes fastest
+(paper Fig. 4). Every HF checkpoint is 57 GB, so 20 per run would be ~1.1 TB per run across ≥ 4 runs. Kept at 10. All
+runs use the same step schedule, so their curves align. Raising it means `SFT_N_LOG_CKPTS` in a run's config.
 
 ## Validation before the real runs
 
-| Test | What it checks |
+| Test | Checks |
 |---|---|
-| `jobs/lib/eval/test_scoring.py` (runs anywhere) | answer extraction (`\boxed{}` nesting, `\text{(B)}`, out-of-range letters), pass@k, CI. **Passed on the login/agent node** |
-| `jobs/test_eval_tiny.sbatch` (gpu_devel, 15 min) | known answers on the tiny MoE from `verify_router_freeze`: bit-identical round-trip copy → parameter change 0 and KL 0; frozen-router SFT → router change exactly 0, attention changed; control SFT → router changed, KL > 0 |
-| `jobs/test_eval_30b.sbatch` (gpu_devel, 30 min) | real 30B: SGLang serves the final SFT checkpoint, 3 questions of every benchmark (≤ 2048 tokens), prompts / stop tokens / grading visible in the log; KL with base + SFT on one GPU fits in memory |
+| `jobs/lib/eval/test_scoring.py` | answer extraction, pass@k, CI. **Passed** (agent node) |
+| `jobs/test_eval_tiny.sbatch` (gpu_devel 15 min) | tiny MoE from `verify_router_freeze`, known answers: identical copy → parameter change 0, KL 0, all routing overlaps exactly 1; frozen-router SFT → router change exactly 0 and `overlap_router` exactly 1 in every layer; control → router changed, KL > 0; specialization script runs |
+| `jobs/test_eval_30b.sbatch` (gpu_devel 30 min) | real 30B: SGLang serves the SFT model, 3 questions per benchmark (≤ 2048 tokens); probe analysis with base + SFT on one GPU (memory, router hooks on 48 layers) |
 
-## Order and cost (all 1-GPU jobs)
+## Order and cost
 
 ```bash
-P=$(sbatch --parsable jobs/prep_eval_bench.sbatch)                        # CPU, ~10 min
-sbatch --dependency=afterok:$P jobs/test_eval_tiny.sbatch                  # gpu_devel 15 min
-sbatch --dependency=afterok:$P jobs/test_eval_30b.sbatch                   # gpu_devel 30 min
-# after both tests pass:
-sbatch jobs/eval_bench.sbatch base                                         # 1 H200, <= 24 h (resubmit to resume)
-sbatch jobs/eval_bench.sbatch sft_final                                    # 1 H200, <= 24 h
-sbatch jobs/eval_kl.sbatch sft                                             # 1 H200, <= 12 h
-sbatch jobs/eval_param_diff.sbatch sft                                     # CPU, <= 8 h
+P=$(sbatch --parsable jobs/prep_eval_bench.sbatch)                       # CPU ~15 min
+sbatch --dependency=afterok:$P jobs/test_eval_tiny.sbatch                 # gpu_devel 15 min
+sbatch --dependency=afterok:$P jobs/test_eval_30b.sbatch                  # gpu_devel 30 min
+# after both pass, for the SFT run:
+sbatch jobs/eval_param_diff.sbatch sft                                    # CPU, <= 8 h
+sbatch jobs/eval_probe.sbatch sft                                         # 1 H200, est. 1-3 h (limit 24 h)
+sbatch jobs/eval_specialization.sbatch sft                                # CPU, minutes (after the two above)
+sbatch jobs/eval_bench.sbatch base;  sbatch jobs/eval_bench.sbatch sft_final   # 1 H200 each, <= 24 h
 ```
 
-Worst case is about 60 GPU-hours. The 30B test measures generation speed, so the time limits can be tightened after it runs.
-Disk: < 1 GB per model for the samples.
+Every GPU job uses 1 GPU. The total for base + SFT is ≤ ~75 GPU-hours (likely far less), small against the ~1,500 GPU-hour
+project budget. The same commands with `grpo` / `grpo_final` analyse the GRPO run.
