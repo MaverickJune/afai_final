@@ -11,7 +11,9 @@
 #      2048 tokens -> summaries written, prompts/stop tokens/grading visible in the log
 #   2) probe_analysis (KL + routing) with base + final SFT checkpoint on one GPU (memory, router hooks on all 48
 #      layers), 3 sequences per probe set
+# PROBE_ONLY=1 sbatch ... skips part 1.
 set -euo pipefail
+set -m   # background jobs get their own process group, so the whole SGLang server tree can be stopped
 source jobs/slime_common.sh
 source jobs/configs/eval.sh
 SFT_FINAL=$(ls -d "$SFT_RUN"/hf_ckpts/step_* | sort | tail -1)
@@ -21,13 +23,14 @@ mkdir -p "$OUT"
 echo "host: $(hostname)  start: $(date)  model: $SFT_FINAL"
 ls "$SFT_FINAL"
 
+if [ "${PROBE_ONLY:-0}" != 1 ]; then
 echo "=== [1] benchmarks (3 questions each, <= 2048 tokens)"
 PORT=$((30000 + SLURM_JOB_ID % 1000))
 slime_exec python -m sglang.launch_server --model-path "$SFT_FINAL" --tokenizer-path "$BASE_HF" \
     --host 127.0.0.1 --port "$PORT" --tp-size 1 --mem-fraction-static 0.85 --random-seed 0 \
     > "$OUT/sglang_server.log" 2>&1 &
 SERVER_PID=$!
-trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
+trap 'kill -- -$SERVER_PID 2>/dev/null || true' EXIT
 for i in $(seq 1 180); do
     if curl -sf "http://127.0.0.1:$PORT/health" >/dev/null; then echo "server healthy after $((i*5))s"; break; fi
     if ! kill -0 $SERVER_PID 2>/dev/null; then echo "server died"; tail -50 "$OUT/sglang_server.log"; exit 1; fi
@@ -40,8 +43,13 @@ for f in "$OUT"/bench/*.samples.jsonl; do
     echo "--- $(basename "$f"): first sample (first 600 chars of the response, tail 300)"
     head -1 "$f" | python3 -c "import json,sys; d=json.loads(sys.stdin.read()); r=d.pop('response'); print(d); print(r[:600]); print('[...]', r[-300:])"
 done
-kill $SERVER_PID 2>/dev/null || true; wait $SERVER_PID 2>/dev/null || true
-sleep 10; nvidia-smi --query-gpu=memory.used --format=csv
+kill -- -$SERVER_PID 2>/dev/null || true; wait $SERVER_PID 2>/dev/null || true
+for i in $(seq 1 24); do   # wait until the server's GPU memory is released
+    used=$(nvidia-smi --query-gpu=memory.used --format=csv,noheader,nounits | head -1)
+    [ "$used" -lt 2000 ] && break; sleep 5
+done
+nvidia-smi --query-gpu=memory.used --format=csv
+fi
 
 echo "=== [2] probes: base + final SFT checkpoint on one GPU, 3 sequences per probe"
 set +u; activate_afai_env; set -u

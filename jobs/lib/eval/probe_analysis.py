@@ -170,7 +170,7 @@ def main():
 
     tok = AutoTokenizer.from_pretrained(a.tokenizer or a.ref)
     cfg = json.load(open(Path(a.ref) / "config.json"))
-    k, n_exp, max_len = cfg["num_experts_per_tok"], cfg["num_experts"], cfg["max_position_embeddings"]
+    k, max_len = cfg["num_experts_per_tok"], cfg["max_position_embeddings"]  # expert count: from the router weights
     probes = {}
     for name in a.probes.split(","):
         probes[name] = build_sequences(tok, Path(a.probe_dir) / f"{name}.jsonl", a.limit, a.max_target, max_len)
@@ -181,6 +181,7 @@ def main():
     ref = load(a.ref)
     ref_tap = RouterTap(ref, k)
     ref_w = ref_tap.weights_fp32()
+    n_exp = next(iter(ref_w.values())).shape[0]
     print(f"ref loaded in {(time.time() - t0) / 60:.1f} min; {len(ref_w)} routers, top-{k} of {n_exp}; "
           f"GPU {torch.cuda.memory_allocated() / 1e9:.1f} GB", flush=True)
 
