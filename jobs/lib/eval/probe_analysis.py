@@ -23,6 +23,8 @@ Resumable per checkpoint. Runs in afai_env.
 
 usage: python probe_analysis.py --ref REF_HF_DIR --ckpt LABEL=DIR [...] --probe-dir DIR --out OUT_DIR
                                 [--probes a,b] [--tokenizer DIR] [--limit N] [--max-target 4096]
+                                [--shard I/N]        process only checkpoints with index % N == I (parallel jobs)
+                                [--combine-only]     only merge the finished per-checkpoint parts (CPU, no model)
 writes: OUT_DIR/kl.csv, routing.csv, expert_load.csv.gz (all checkpoints; per-checkpoint parts in OUT_DIR/ckpts/LABEL/)
 """
 
@@ -152,9 +154,19 @@ def main():
     p.add_argument("--out", required=True)
     p.add_argument("--limit", type=int, default=0)
     p.add_argument("--max-target", type=int, default=4096)
+    p.add_argument("--shard", default="0/1")
+    p.add_argument("--combine-only", action="store_true")
     a = p.parse_args()
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
+    ckpts = [c.split("=", 1) for c in a.ckpt]
+    labels = [lbl for lbl, _ in ckpts]
+    if a.combine_only:
+        combine(out, labels)
+        return
+    si, sn = map(int, a.shard.split("/"))
+    mine = [(lbl, d) for i, (lbl, d) in enumerate(ckpts) if i % sn == si]
+    print(f"shard {si}/{sn}: {[lbl for lbl, _ in mine]}")
 
     tok = AutoTokenizer.from_pretrained(a.tokenizer or a.ref)
     cfg = json.load(open(Path(a.ref) / "config.json"))
@@ -172,9 +184,7 @@ def main():
     print(f"ref loaded in {(time.time() - t0) / 60:.1f} min; {len(ref_w)} routers, top-{k} of {n_exp}; "
           f"GPU {torch.cuda.memory_allocated() / 1e9:.1f} GB", flush=True)
 
-    labels = []
-    for lbl, d in (c.split("=", 1) for c in a.ckpt):
-        labels.append(lbl)
+    for lbl, d in mine:
         cdir = out / "ckpts" / lbl
         if (cdir / "done.json").exists():
             print(f"[{lbl}] done earlier, skipping")
@@ -239,11 +249,18 @@ def main():
         del model, tap
         torch.cuda.empty_cache()
 
+    combine(out, labels)
+
+
+def combine(out, labels):
+    """Merge the per-checkpoint parts of all finished checkpoints, in the given order."""
+    done = [lbl for lbl in labels if (out / "ckpts" / lbl / "done.json").exists()]
     for fname, gz in (("kl.csv", False), ("routing.csv", False), ("expert_load.csv.gz", True)):
-        rows = [r for lbl in labels if (out / "ckpts" / lbl / fname).exists() for r in read_csv(out / "ckpts" / lbl / fname)]
+        rows = [r for lbl in done for r in read_csv(out / "ckpts" / lbl / fname)]
         if rows:
             write_csv(out / fname, rows, gz=gz)
-    print(f"wrote {out}/kl.csv, routing.csv, expert_load.csv.gz")
+    print(f"combined {len(done)}/{len(labels)} checkpoints into {out}/kl.csv, routing.csv, expert_load.csv.gz; "
+          f"missing: {[lbl for lbl in labels if lbl not in done]}")
 
 
 if __name__ == "__main__":
