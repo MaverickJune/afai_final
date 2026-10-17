@@ -11,7 +11,7 @@ Where the settings are recorded:
 | File | Contents |
 |---|---|
 | this file | the training-relevant settings in words, incl. the important defaults |
-| `resolved_args.json` (this folder) | **every** resolved argument incl. all slime / Megatron / TransformerEngine / SGLang defaults, from the CPU dry run of the exact launch command (written by `jobs/prep_openr1_grpo.sbatch`; `num_rollout` is derived at startup: 976) |
+| `resolved_args.json` (this folder) | **every** resolved argument incl. all slime / Megatron / TransformerEngine / SGLang defaults, from the dry run of the exact launch command (written by step 0 of `jobs/test_grpo_ckpt_tiny.sbatch`, on a GPU node because Megatron's validation queries the device; `num_rollout` is derived at startup: 976) |
 | `$GRPO_RUN/train_args_<timestamp>.txt` | the explicit command-line arguments of each launch |
 | `$GRPO_RUN/resolved_args_<jobid>_<timestamp>.json` | every resolved argument of each real launch (copy in `logs/resolved_args_*`) |
 | job log `logs/grpo_openr1_30b_<jobid>.out` | slime/Megatron also print all arguments at startup |
@@ -21,8 +21,8 @@ Where the settings are recorded:
 1. Set up the environment: `env_guide.txt` (container, afai_env, `SCR`, verification jobs incl.
    `verify_router_freeze`), then `jobs/download_30b.sbatch` + `jobs/convert_30b.sbatch` (base model).
 2. `cd ~/afai_project`
-   `P=$(sbatch --parsable jobs/prep_openr1_grpo.sbatch)`   (CPU only)
-   `T=$(sbatch --parsable --dependency=afterok:$P jobs/test_grpo_ckpt_tiny.sbatch)`   (1 GPU, needs the tiny model from `verify_router_freeze`)
+   `P=$(sbatch --parsable jobs/prep_openr1_grpo.sbatch)`   (CPU only, ~5 min)
+   `T=$(sbatch --parsable --dependency=afterok:$P jobs/test_grpo_ckpt_tiny.sbatch)`   (1 GPU, needs the tiny model from `verify_router_freeze`; also dry-runs the real 30B arguments)
    `sbatch --dependency=afterok:$T jobs/grpo_openr1_30b.sbatch`
 3. If the job stops with `STATUS = needs_resume ...`, submit `jobs/grpo_openr1_30b.sbatch` again.
 4. Check `$SCR/data/openr1_math_grpo/manifest.json`: revision and `output_sha256` should match the table below.
@@ -44,11 +44,11 @@ Where the settings are recorded:
 | Dataset | `open-r1/OpenR1-Math-220k`, config `default`, split `train` (93,733 rows) |
 | Revision | `e4e141ec9dea9f8326f4d347be56105859b2bd68` (pinned in `prep_openr1_grpo.py`; the SFT data's snapshot) |
 | Selection | **0-based rows 0, 3, 6, ..., 93732 of the train split in dataset order** = pandas `iloc[0::3]` over `data/train-0000{0..9}-of-00010.parquet` concatenated in order → **31,245 rows**. No filtering, no dedup (same practice as the SFT run) |
-| Question types | QUESTION_TYPES |
+| Question types | math-word-problem 25,951, MCQ 5,257, other 37 |
 | Prompt | one user turn: `"Please reason step by step, and put your final answer within \boxed{}.\n\n"` + the row's user message verbatim (the same user turn the SFT run trains on). The dataset card says R1 generated the solutions with this instruction prepended; `messages` stores the problem without it. Wrapped in the base model's Qwen3 chat template (`--apply-chat-template`, generation prompt `<\|im_start\|>assistant\n`; thinking is neither forced nor disabled). The prep log prints the rendered first prompt |
 | Label | the row's `answer` (string, as in the dataset) |
-| Output file | `$SCR/data/openr1_math_grpo/openr1_math_default_train_idx3k0_grpo.jsonl`, sha256 OUTPUT_SHA256 |
-| Prompt lengths | PROMPT_TOKEN_STATS |
+| Output file | `$SCR/data/openr1_math_grpo/openr1_math_default_train_idx3k0_grpo.jsonl`, sha256 `869b7ec9169f4978345ed85342ca01901d552404447a2502fd46227f34cdcbea` (first row index 0 / uuid `586fd646-…`, last row index 93732 / uuid `d537c055-…`) |
+| Prompt lengths | rendered with the chat template: mean 118, p99 343, max 2,072 tokens. Longest possible sample 2,072 + 8,192 = 10,264 tokens, within the 20,480 tokens per GPU |
 
 ## Reward
 
@@ -56,7 +56,7 @@ Where the settings are recorded:
 |---|---|
 | Type | `--rm-type math` (slime `grade_answer_verl`): 1 if the **last `\boxed{…}` anywhere in the response** equals the label after slime's MATH normalization or sympy equivalence, else 0. No format reward, no length penalty. Truncated responses are graded like any other |
 | Why not slime's example (`deepscaler`) | it gives 0 to every response without `</think>`; the base model is not trained on that format yet |
-| Coverage (information only) | REWARD_COVERAGE (from manifest.json: rows whose R1 reference solution earns reward 1, overall and by question type, a rough ceiling for the mean training reward; plus the dataset's own math_verify count. MCQ labels are sometimes the letter and sometimes the option's value) |
+| Coverage (information only) | the row's R1 reference solution earns reward 1 on **18,984 / 31,245 rows (60.8%)**: math-word-problem 17,119 / 25,951 (66.0%), MCQ 1,838 / 5,257 (35.0%; labels are sometimes the letter and sometimes the option's value), other 27 / 37; no grading timeouts. The dataset's own math_verify marks at least one R1 generation correct on 21,613 rows (69.2%). A rough ceiling for the mean training reward (manifest.json) |
 
 ## Training
 
