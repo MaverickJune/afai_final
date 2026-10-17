@@ -52,16 +52,22 @@ TEST_ARGS=(
     --sglang-cuda-graph-bs 1 2 4 8 16
 )
 
+# Both phases run in their own PID namespace (--pid). After a stop, slime keeps the SGLang serving processes alive
+# for a manual restart, and `ray stop` crashes inside this container (psutil pidfd_open: Errno 22) before it stops
+# the GCS server. Without --pid, phase A's GCS keeps the job's Ray port, and phase B's `ray start` attaches to it
+# and fails with "Session name ... does not match persisted value" (job 29877033). The 30B run is unaffected: one
+# phase per Slurm job, and Slurm kills leftover processes at job end.
 echo "=== phase A"
 # --check-weight-update-equal: SGLang snapshots the base weights it loaded, overwrites them with random values, and
 # after the trainer's first weight push raises unless every tensor equals the snapshot. Phase A only: after a resume
 # the trainer pushes trained weights, which differ from the base snapshot by design.
-slime_exec env "${TEST_ENV[@]}" SFT_STOP_AFTER_STEP=3 bash jobs/lib/run_30b.sh grpo "$GRPO_RUN" "${TEST_ARGS[@]}" \
+SLIME_APPTAINER_FLAGS=--pid slime_exec env "${TEST_ENV[@]}" SFT_STOP_AFTER_STEP=3 \
+    bash jobs/lib/run_30b.sh grpo "$GRPO_RUN" "${TEST_ARGS[@]}" \
     --check-weight-update-equal
 echo "STATUS after A: $(cat "$GRPO_RUN/STATUS")"; ls "$GRPO_RUN/ckpt" "$GRPO_RUN/hf_ckpts"
 
 echo "=== phase B (resume)"
-slime_exec env "${TEST_ENV[@]}" bash jobs/lib/run_30b.sh grpo "$GRPO_RUN" "${TEST_ARGS[@]}"
+SLIME_APPTAINER_FLAGS=--pid slime_exec env "${TEST_ENV[@]}" bash jobs/lib/run_30b.sh grpo "$GRPO_RUN" "${TEST_ARGS[@]}"
 echo "STATUS after B: $(cat "$GRPO_RUN/STATUS")"; ls "$GRPO_RUN/ckpt" "$GRPO_RUN/hf_ckpts"
 
 echo "=== checks"
