@@ -204,6 +204,11 @@ reward that does not need it: `--rm-type math`, `dapo`, or `boxed_math` (grade o
    `ray start` in the same job reuses the port and attaches to the old GCS ("Session name ... does not match
    persisted value"). Fix: run each Ray session in its own PID namespace, `SLIME_APPTAINER_FLAGS=--pid slime_exec ...`
    (used by `jobs/test_grpo_ckpt_tiny.sbatch`).
+10. **SGLang MoE on B200 fails at startup inside the image** (job 29879427, 8× B200): with `--sglang-moe-runner-backend
+    auto`, SGLang picks FlashInfer's TRT-LLM MoE kernel on Blackwell, whose setup creates a symlink inside
+    `/usr/local/lib/python3.12/dist-packages/flashinfer_cubin/` (read-only image; the `--writable-tmpfs` layer is
+    small) → `OSError: [Errno 12] Cannot allocate memory`. On H200 `auto` uses SGLang's Triton MoE kernel, so this
+    never showed up there. Fix: `--sglang-moe-runner-backend triton` (set in `jobs/configs/grpo_openr1_idx3k0.sh`).
 
 ## 6. Storage used
 

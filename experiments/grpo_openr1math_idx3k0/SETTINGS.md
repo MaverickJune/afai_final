@@ -63,7 +63,7 @@ Where the settings are recorded:
 | | |
 |---|---|
 | Algorithm | GRPO (`--advantage-estimator grpo`): 8 responses per prompt, advantage = (reward − group mean) / (group std + 1e-6); PPO-style clipped objective, ε = 0.2 low / 0.28 high (`--eps-clip 0.2 --eps-clip-high 0.28`); KL loss on with coefficient 0 (`--use-kl-loss --kl-loss-coef 0 --kl-loss-type low_var_kl`: reference log-probs are computed and logged, no KL penalty); entropy coefficient 0 |
-| Rollout sampling | temperature 1.0, top-p 1.0, top-k −1 (no truncation), max response 8192 tokens; one SGLang engine with TP 8, colocated with training (`--colocate`: the GPUs alternate between SGLang and Megatron), `--sglang-mem-fraction-static 0.7` |
+| Rollout sampling | temperature 1.0, top-p 1.0, top-k −1 (no truncation), max response 8192 tokens; one SGLang engine with TP 8, colocated with training (`--colocate`: the GPUs alternate between SGLang and Megatron), `--sglang-mem-fraction-static 0.7`; SGLang MoE kernel Triton on both H200 and B200 (`--sglang-moe-runner-backend triton`; B200's default fails in the read-only image, SETUP.md §5) |
 | Batch | 32 prompts × 8 responses = 256 per step, global batch 256 → **1 optimizer step per rollout** (on-policy); `--balance-data`; micro-batches packed to ≤ 20480 tokens per GPU (`--use-dynamic-batch-size`) |
 | Epochs / steps | 1 epoch; `num_rollout = 31245 // 32 = 976` steps (31,232 prompts); the last 13 prompts of the shuffled order are not used |
 | Data order | one random permutation of the 31,245 rows: `random.Random(42 + 0).shuffle` (`--rollout-shuffle`, `--rollout-seed 42`), consumed in order, 32 per step; Megatron seed 1234 |
