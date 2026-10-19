@@ -107,9 +107,22 @@ def run_one(name, a, tok, ctx_len, stop_ids):
     partial_path = out_dir / f"{name}.partial.jsonl"
     done = {}
     if partial_path.exists():
+        bad = 0
         for l in open(partial_path):
-            d = json.loads(l)
+            try:
+                d = json.loads(l)
+            except json.JSONDecodeError:  # line cut off by an interrupted write (e.g. disk quota)
+                bad += 1
+                continue
             done[(d["qi"], d["k"])] = d
+        # Rewrite with only complete lines, so new lines are never appended to a cut-off one.
+        print(f"[{name}] resuming: {len(done)} samples kept, {bad} unreadable line(s) dropped")
+        # Written to a temp file and renamed: a failed write (e.g. disk quota) leaves the old file intact.
+        tmp_path = partial_path.with_suffix(".tmp")
+        with open(tmp_path, "w") as pf:
+            for d in done.values():
+                pf.write(json.dumps(d, ensure_ascii=False) + "\n")
+        os.replace(tmp_path, partial_path)
     todo = [j for j in jobs if j not in done]
     print(f"[{name}] {len(recs)} questions x {n} samples = {len(jobs)} generations; {len(done)} already done; "
           f"max_new {max_new}; prompt tokens max {max(plens)}", flush=True)

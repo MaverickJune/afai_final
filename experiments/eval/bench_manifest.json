@@ -1,0 +1,97 @@
+{
+  "math500": {
+    "repo": "HuggingFaceH4/MATH-500",
+    "revision": "6e4ed1a2a79af7d8630a6b768ec859cb5af4d3be",
+    "files_sha256": {
+      "test.jsonl": "35dc41080a3680858b27fa7e0533d2d547825316fc5dafe5d316f4ccc5a06132"
+    },
+    "n": 500,
+    "output_sha256": "bb27830653e9bb05878aa2553de57fb24f9f5eb6e153d12b340d104a66b0bc76"
+  },
+  "aime24": {
+    "repo": "HuggingFaceH4/aime_2024",
+    "revision": "2fe88a2f1091d5048c0f36abc874fb997b3dd99a",
+    "files_sha256": {
+      "data/train-00000-of-00001.parquet": "26139847601a5037c237d5928b195e7260ca8074cf4f264b794af42847f79ccf"
+    },
+    "n": 30,
+    "output_sha256": "17210580d793ac93cc7b3defdd864fe4725cb68bbd9203e08bffaa113475160c"
+  },
+  "aime26": {
+    "repo": "MathArena/aime_2026",
+    "revision": "d2de22f3c656b4f56cf8981212186377d1e23bc3",
+    "files_sha256": {
+      "data/train-00000-of-00001.parquet": "d91db799651b4cc1f0734f52792a695c9cc60dac342524b3d8e5b2ff31c3e957"
+    },
+    "n": 30,
+    "output_sha256": "4387472032998a703c613cd3dc6124057b95c86f091f46495c610524efd34dc1"
+  },
+  "hmmt_feb26": {
+    "repo": "MathArena/hmmt_feb_2026",
+    "revision": "02fba4f74d8e68e73e66a02d540fd979c05c274c",
+    "files_sha256": {
+      "data/train-00000-of-00001.parquet": "e5fcff6b1c2262841c0c37bf6d7b42529f284528d5f0d5c45c52e8bf0654a916"
+    },
+    "n": 33,
+    "output_sha256": "8afc3fbc6b894a9817aae1d4af27ebc364130525664924f84a173af357c8464c"
+  },
+  "gsm8k": {
+    "repo": "openai/gsm8k",
+    "revision": "740312add88f781978c0658806c59bc2815b9866",
+    "files_sha256": {
+      "main/test-00000-of-00001.parquet": "ee7b8da9e381df27b9e3f7758a159ab2bdaa4dbaa910546cbbc47e0cb44e4f59"
+    },
+    "n": 1319,
+    "output_sha256": "fabc0866551ac23b89762a320ef87ffcd98b60e4ede31a691cde2a198d0987f2"
+  },
+  "mmlu": {
+    "repo": "cais/mmlu",
+    "revision": "c30699e8356da336a370243923dbaf21066bb9fe",
+    "files_sha256": {
+      "all/test-00000-of-00001.parquet": "74a41822ce7d3def56e1682f958469c04642a5336a5ce912fa375fdb90fb25d7"
+    },
+    "n": 14042,
+    "output_sha256": "c07e1842c03ef7e9d055862ecb5409703ef88048eea5e7ec8e472cbd713c2afd"
+  },
+  "mmlu_pro": {
+    "repo": "TIGER-Lab/MMLU-Pro",
+    "revision": "b189ec765aa7ed75c8acfea42df31fdae71f97be",
+    "files_sha256": {
+      "data/test-00000-of-00001.parquet": "0e24a191921c2f453518a537a8b2117bd137e7714d4ef1565e9ba06c1ecb9ad8"
+    },
+    "n": 12032,
+    "output_sha256": "1f9c83553af46fef9910c2623808fd00f3594fa22eb1ffd72a3d8a2d7a359db8"
+  },
+  "probes": {
+    "openr1_heldout": {
+      "repo": "open-r1/OpenR1-Math-220k",
+      "revision": "e4e141ec9dea9f8326f4d347be56105859b2bd68",
+      "files_sha256": {
+        "data/train-00000-of-00010.parquet": "ccc3a95e4875dc4cff9bec2f0fb1c93e4c9cbb24fb24853fd0b96c416e1a263c",
+        "data/train-00001-of-00010.parquet": "a7d3eb54d97f7e1237a872947f2246de54a104be224646f62f588abdf6c7db60",
+        "data/train-00002-of-00010.parquet": "a44a2354bfa752541ab768b62edf01f3df4b9b2a7660774ab1eb6e7f19f0a86b",
+        "data/train-00003-of-00010.parquet": "dd7d2f0f04d80b3ae08484b706c4f7fd9dd29eeff4038c36257a307c77b877e9",
+        "data/train-00004-of-00010.parquet": "e358157990d7744643e25f1e692556ac5fd4a2212c008cf67475b14e040861ea",
+        "data/train-00005-of-00010.parquet": "30254d14d17b63d1f7963488d53a2d26aa22070f71baa2fe601201b081e38060",
+        "data/train-00006-of-00010.parquet": "b3bce93c06d4dc22788c04d0a1da5cbadb5b3db31046809c59a4ec26e96ebb52",
+        "data/train-00007-of-00010.parquet": "7def8029cf6d40f7493e9aa4be4b49c251ae7e0cb23b0b117c485e09ff5d5021",
+        "data/train-00008-of-00010.parquet": "29cf75a663e91039fc92bffd86a9ad845f992302da52d1fb1563b6c41ae777ed",
+        "data/train-00009-of-00010.parquet": "14df2775196a701b97a71cf0285fa75d97980fbda4db9ec9af9c2a07658ca256"
+      },
+      "selection": "random.Random(0).sample of iloc[2::3] (31244 rows), 300",
+      "n": 300,
+      "output_sha256": "d36a6fcb81f8c1bc97ef773d64e85a79a9356dc2fad3dd4730fcc004697f3b3e"
+    },
+    "math500": {
+      "source": "math500.jsonl",
+      "n": 500,
+      "output_sha256": "1a3fd1c65efb76123e854d260a67f1ff7a578e8b03985d4b0072fa807850ee28"
+    },
+    "general": {
+      "source": "mmlu.jsonl",
+      "selection": "random.Random(0).sample, 300",
+      "n": 300,
+      "output_sha256": "2ecd673c59dcb1197f81831d635a6af6fb2800c3085b134efbb974ddc888d8c6"
+    }
+  }
+}

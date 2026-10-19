@@ -1,0 +1,52 @@
+{
+ "bench": "math500",
+ "model_dir": "/home/wb379/scratch_pi_lz484/wb379/models/Qwen3-30B-A3B-Base",
+ "n_questions": 500,
+ "samples_per_question": 4,
+ "accuracy": 0.754,
+ "ci95": 0.030360893209405843,
+ "pass@1": 0.754,
+ "pass@4": 0.886,
+ "truncated_rate": 0.016,
+ "no_answer_rate": 0.032,
+ "grade_timeouts": 0,
+ "mean_response_tokens": 1053.3965,
+ "max_new_tokens": 30000,
+ "sampling": {
+  "temperature": 0.6,
+  "top_p": 0.95,
+  "top_k": -1
+ },
+ "limit": 0,
+ "by_group": {
+  "Algebra": {
+   "n": 124,
+   "accuracy": 0.8911290322580645
+  },
+  "Counting & Probability": {
+   "n": 38,
+   "accuracy": 0.7302631578947368
+  },
+  "Geometry": {
+   "n": 41,
+   "accuracy": 0.5853658536585366
+  },
+  "Intermediate Algebra": {
+   "n": 97,
+   "accuracy": 0.5979381443298969
+  },
+  "Number Theory": {
+   "n": 62,
+   "accuracy": 0.842741935483871
+  },
+  "Prealgebra": {
+   "n": 82,
+   "accuracy": 0.8475609756097561
+  },
+  "Precalculus": {
+   "n": 56,
+   "accuracy": 0.625
+  }
+ },
+ "generation_minutes_this_job": 18.551025760173797
+}

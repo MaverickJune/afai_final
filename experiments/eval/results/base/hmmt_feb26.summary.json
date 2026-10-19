@@ -1,0 +1,49 @@
+{
+ "bench": "hmmt_feb26",
+ "model_dir": "/home/wb379/scratch_pi_lz484/wb379/models/Qwen3-30B-A3B-Base",
+ "n_questions": 33,
+ "samples_per_question": 16,
+ "accuracy": 0.05113636363636364,
+ "ci95": 0.051537024656729255,
+ "pass@1": 0.05113636363636364,
+ "pass@4": 0.1111888111888112,
+ "pass@16": 0.15151515151515152,
+ "truncated_rate": 0.06818181818181818,
+ "no_answer_rate": 0.13636363636363635,
+ "grade_timeouts": 0,
+ "mean_response_tokens": 2988.160984848485,
+ "max_new_tokens": 30000,
+ "sampling": {
+  "temperature": 0.6,
+  "top_p": 0.95,
+  "top_k": -1
+ },
+ "limit": 0,
+ "by_group": {
+  "['Algebra']": {
+   "n": 5,
+   "accuracy": 0.2625
+  },
+  "['Combinatorics' ' Geometry']": {
+   "n": 2,
+   "accuracy": 0.0
+  },
+  "['Combinatorics' ' Number Theory']": {
+   "n": 2,
+   "accuracy": 0.0
+  },
+  "['Combinatorics']": {
+   "n": 8,
+   "accuracy": 0.015625
+  },
+  "['Geometry']": {
+   "n": 10,
+   "accuracy": 0.025
+  },
+  "['Number Theory']": {
+   "n": 6,
+   "accuracy": 0.0
+  }
+ },
+ "generation_minutes_this_job": 14.745327889919281
+}

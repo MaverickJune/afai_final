@@ -1,0 +1,49 @@
+{
+ "bench": "hmmt_feb26",
+ "model_dir": "/home/wb379/scratch_pi_lz484/wb379/runs/sft_openr1math_idx3k1_qwen3_30b_a3b_base/hf_ckpts/step_00976",
+ "n_questions": 33,
+ "samples_per_question": 16,
+ "accuracy": 0.26325757575757575,
+ "ci95": 0.13185870480403908,
+ "pass@1": 0.26325757575757575,
+ "pass@4": 0.3701798201798202,
+ "pass@16": 0.45454545454545453,
+ "truncated_rate": 0.2897727272727273,
+ "no_answer_rate": 0.2803030303030303,
+ "grade_timeouts": 0,
+ "mean_response_tokens": 17946.5625,
+ "max_new_tokens": 30000,
+ "sampling": {
+  "temperature": 0.6,
+  "top_p": 0.95,
+  "top_k": -1
+ },
+ "limit": 0,
+ "by_group": {
+  "['Algebra']": {
+   "n": 5,
+   "accuracy": 0.5625
+  },
+  "['Combinatorics' ' Geometry']": {
+   "n": 2,
+   "accuracy": 0.0
+  },
+  "['Combinatorics' ' Number Theory']": {
+   "n": 2,
+   "accuracy": 0.0
+  },
+  "['Combinatorics']": {
+   "n": 8,
+   "accuracy": 0.1640625
+  },
+  "['Geometry']": {
+   "n": 10,
+   "accuracy": 0.38125
+  },
+  "['Number Theory']": {
+   "n": 6,
+   "accuracy": 0.125
+  }
+ },
+ "generation_minutes_this_job": 83.52778174877167
+}

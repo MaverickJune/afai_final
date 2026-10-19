@@ -1,0 +1,27 @@
+{
+ "bench": "gsm8k",
+ "model_dir": "/home/wb379/scratch_pi_lz484/wb379/models/Qwen3-30B-A3B-Base",
+ "n_questions": 1319,
+ "samples_per_question": 1,
+ "accuracy": 0.8688400303260045,
+ "ci95": 0.018225058501752166,
+ "pass@1": 0.8688400303260045,
+ "truncated_rate": 0.006065200909780136,
+ "no_answer_rate": 0.0356330553449583,
+ "grade_timeouts": 0,
+ "mean_response_tokens": 401.98483699772555,
+ "max_new_tokens": 16384,
+ "sampling": {
+  "temperature": 0.6,
+  "top_p": 0.95,
+  "top_k": -1
+ },
+ "limit": 0,
+ "by_group": {
+  "gsm8k": {
+   "n": 1319,
+   "accuracy": 0.8688400303260045
+  }
+ },
+ "generation_minutes_this_job": 3.30150599082311
+}

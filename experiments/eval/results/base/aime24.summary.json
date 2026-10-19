@@ -1,0 +1,29 @@
+{
+ "bench": "aime24",
+ "model_dir": "/home/wb379/scratch_pi_lz484/wb379/models/Qwen3-30B-A3B-Base",
+ "n_questions": 30,
+ "samples_per_question": 16,
+ "accuracy": 0.16666666666666666,
+ "ci95": 0.08145518594913195,
+ "pass@1": 0.16666666666666666,
+ "pass@4": 0.365018315018315,
+ "pass@16": 0.5,
+ "truncated_rate": 0.06458333333333334,
+ "no_answer_rate": 0.11875,
+ "grade_timeouts": 0,
+ "mean_response_tokens": 2908.797916666667,
+ "max_new_tokens": 30000,
+ "sampling": {
+  "temperature": 0.6,
+  "top_p": 0.95,
+  "top_k": -1
+ },
+ "limit": 0,
+ "by_group": {
+  "aime2024": {
+   "n": 30,
+   "accuracy": 0.16666666666666666
+  }
+ },
+ "generation_minutes_this_job": 12.384830522537232
+}

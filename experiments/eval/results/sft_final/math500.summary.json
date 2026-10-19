@@ -1,0 +1,52 @@
+{
+ "bench": "math500",
+ "model_dir": "/home/wb379/scratch_pi_lz484/wb379/runs/sft_openr1math_idx3k1_qwen3_30b_a3b_base/hf_ckpts/step_00976",
+ "n_questions": 500,
+ "samples_per_question": 4,
+ "accuracy": 0.9135,
+ "ci95": 0.021065809109237974,
+ "pass@1": 0.9135,
+ "pass@4": 0.956,
+ "truncated_rate": 0.0245,
+ "no_answer_rate": 0.0215,
+ "grade_timeouts": 0,
+ "mean_response_tokens": 3908.7165,
+ "max_new_tokens": 30000,
+ "sampling": {
+  "temperature": 0.6,
+  "top_p": 0.95,
+  "top_k": -1
+ },
+ "limit": 0,
+ "by_group": {
+  "Algebra": {
+   "n": 124,
+   "accuracy": 0.969758064516129
+  },
+  "Counting & Probability": {
+   "n": 38,
+   "accuracy": 0.8947368421052632
+  },
+  "Geometry": {
+   "n": 41,
+   "accuracy": 0.75
+  },
+  "Intermediate Algebra": {
+   "n": 97,
+   "accuracy": 0.8711340206185567
+  },
+  "Number Theory": {
+   "n": 62,
+   "accuracy": 0.9556451612903226
+  },
+  "Prealgebra": {
+   "n": 82,
+   "accuracy": 0.9237804878048781
+  },
+  "Precalculus": {
+   "n": 56,
+   "accuracy": 0.9330357142857143
+  }
+ },
+ "generation_minutes_this_job": 41.587847940127055
+}
