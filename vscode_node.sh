@@ -1,8 +1,8 @@
 #!/bin/bash
 # vscode_node.sh -- get a small compute node for VS Code Remote-SSH (code editing only; no GPU).
 #
-#   ./vscode_node.sh            start (or reuse) a node for 4 h and print its name
-#   ./vscode_node.sh 8          same, for 8 hours
+#   ./vscode_node.sh            start (or reuse) a node for 6 h (the devel partition's maximum) and print its name
+#   ./vscode_node.sh 2          same, for 2 hours (at most 6)
 #   ./vscode_node.sh status     show the current VS Code node, if any
 #   ./vscode_node.sh stop       release it (scancel)
 #
@@ -57,7 +57,7 @@ case "${1:-}" in
         if [ -z "$id" ]; then echo "no VS Code node job"; exit 0; fi
         scancel "$id" && echo "released job $id" ;;
     ""|[0-9]*)
-        hours=${1:-4}
+        hours=${1:-6}
         id=$(current)
         if [ -n "$id" ]; then
             echo "reusing existing VS Code job $id"
