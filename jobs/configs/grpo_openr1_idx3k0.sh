@@ -34,6 +34,9 @@ GRPO_ENV=(
 GRPO_ARGS=(
     --rm-type math                        # last \boxed{} anywhere in the response vs label (deepscaler needs </think>)
     --sglang-cuda-graph-bs 1 2 4 8 $(seq 16 8 256)
+    # SGLang's MoE kernel. "auto" picks Triton on H200 but FlashInfer TRT-LLM on B200, which creates a symlink inside
+    # the read-only image at startup and fails (Errno 12, job 29879427). Triton on both GPU types.
+    --sglang-moe-runner-backend triton
     --save-hf "$GRPO_RUN/hf_ckpts/_rollout_{rollout_id}"   # path is a placeholder; sft_ckpt.py picks hf_ckpts/step_NNNNN
     --custom-megatron-init-path sft_ckpt.actor_init
 )

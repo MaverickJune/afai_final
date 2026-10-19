@@ -14,7 +14,9 @@ SLIME_LD_LIBRARY_PATH=/usr/local/lib/python3.12/dist-packages/nvidia/cudnn/lib:/
 slime_exec() {
     # --cleanenv: keep host module env (LD_LIBRARY_PATH etc.) out of the container.
     # $HOME is bound by default; ~/scratch_pi_lz484 is a symlink into /nfs/roberts/scratch.
-    apptainer exec --nv --cleanenv --writable-tmpfs \
+    # SLIME_APPTAINER_FLAGS: extra apptainer flags for one call, e.g. `SLIME_APPTAINER_FLAGS=--pid slime_exec ...`
+    # (own PID namespace: every process the command started is killed when it exits).
+    apptainer exec --nv --cleanenv --writable-tmpfs ${SLIME_APPTAINER_FLAGS:-} \
         --bind /nfs/roberts/scratch \
         --env HF_HOME="$HF_HOME" \
         --env SCR="$SCR" \

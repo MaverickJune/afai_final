@@ -11,6 +11,8 @@
 # GRPO prompts, with the same config file as the 30B run.
 #   phase A: 6-step run, forced full save + stop after step 3   (= the time-limit path)
 #   phase B: same command again -> resumes at step 4, runs to step 6, final full save
+# Step 0 also dry-runs the real 30B argument list and saves every resolved argument to
+# experiments/grpo_openr1math_idx3k0/resolved_args.json.
 # The random model never solves anything, so this test uses --rm-type random to get a learning signal
 # (the math reward itself is checked on the R1 reference solutions by the prep job). JOB_END_EPOCH is not set, so
 # the time-based full save is off: phase A's stop is forced, and SGLang startup cannot trigger an early stop.
@@ -22,6 +24,16 @@ source jobs/slime_common.sh
 GRPO_RUN=$SCR/verify/grpo_ckpt_tiny
 source jobs/configs/grpo_openr1_idx3k0.sh
 echo "host: $(hostname)  start: $(date)"
+
+echo "=== [0] DRY_RUN of the REAL 30B launch arguments (parse + full slime/Megatron validation on this GPU node)"
+(
+    unset GRPO_RUN
+    source jobs/configs/grpo_openr1_idx3k0.sh
+    slime_exec env "${GRPO_ENV[@]}" NGPUS=8 DRY_RUN=1 \
+        DRY_RUN_ARGS_JSON="$PWD/experiments/grpo_openr1math_idx3k0/resolved_args.json" \
+        bash jobs/lib/run_30b.sh grpo "$GRPO_RUN" "${GRPO_ARGS[@]}"
+)
+
 TINY=$SCR/verify/router_freeze
 rm -rf "$GRPO_RUN"   # outputs of a previous run of this test only
 mkdir -p "$GRPO_RUN"
@@ -40,16 +52,22 @@ TEST_ARGS=(
     --sglang-cuda-graph-bs 1 2 4 8 16
 )
 
+# Both phases run in their own PID namespace (--pid). After a stop, slime keeps the SGLang serving processes alive
+# for a manual restart, and `ray stop` crashes inside this container (psutil pidfd_open: Errno 22) before it stops
+# the GCS server. Without --pid, phase A's GCS keeps the job's Ray port, and phase B's `ray start` attaches to it
+# and fails with "Session name ... does not match persisted value" (job 29877033). The 30B run is unaffected: one
+# phase per Slurm job, and Slurm kills leftover processes at job end.
 echo "=== phase A"
 # --check-weight-update-equal: SGLang snapshots the base weights it loaded, overwrites them with random values, and
 # after the trainer's first weight push raises unless every tensor equals the snapshot. Phase A only: after a resume
 # the trainer pushes trained weights, which differ from the base snapshot by design.
-slime_exec env "${TEST_ENV[@]}" SFT_STOP_AFTER_STEP=3 bash jobs/lib/run_30b.sh grpo "$GRPO_RUN" "${TEST_ARGS[@]}" \
+SLIME_APPTAINER_FLAGS=--pid slime_exec env "${TEST_ENV[@]}" SFT_STOP_AFTER_STEP=3 \
+    bash jobs/lib/run_30b.sh grpo "$GRPO_RUN" "${TEST_ARGS[@]}" \
     --check-weight-update-equal
 echo "STATUS after A: $(cat "$GRPO_RUN/STATUS")"; ls "$GRPO_RUN/ckpt" "$GRPO_RUN/hf_ckpts"
 
 echo "=== phase B (resume)"
-slime_exec env "${TEST_ENV[@]}" bash jobs/lib/run_30b.sh grpo "$GRPO_RUN" "${TEST_ARGS[@]}"
+SLIME_APPTAINER_FLAGS=--pid slime_exec env "${TEST_ENV[@]}" bash jobs/lib/run_30b.sh grpo "$GRPO_RUN" "${TEST_ARGS[@]}"
 echo "STATUS after B: $(cat "$GRPO_RUN/STATUS")"; ls "$GRPO_RUN/ckpt" "$GRPO_RUN/hf_ckpts"
 
 echo "=== checks"

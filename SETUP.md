@@ -198,6 +198,17 @@ reward that does not need it: `--rm-type math`, `dapo`, or `boxed_math` (grade o
 7. Harmless noise: `SyntaxWarning: invalid escape sequence` from Megatron/torchao, modelopt warning about
    transformers 5.12.1, "GPTModel IS DEPRECATED".
 8. Files written from inside the container show group `nogroup` in container `ls` (unmapped GID display).
+9. **`ray stop --force` can crash inside the container** (psutil `os.pidfd_open`: `OSError: [Errno 22]`) before it
+   stops the GCS server. Seen after a GRPO run that stopped for resume, when slime keeps the SGLang serving processes
+   alive (job 29877033). Harmless for a Slurm job that runs Ray once (Slurm kills leftovers at job end). A second
+   `ray start` in the same job reuses the port and attaches to the old GCS ("Session name ... does not match
+   persisted value"). Fix: run each Ray session in its own PID namespace, `SLIME_APPTAINER_FLAGS=--pid slime_exec ...`
+   (used by `jobs/test_grpo_ckpt_tiny.sbatch`).
+10. **SGLang MoE on B200 fails at startup inside the image** (job 29879427, 8× B200): with `--sglang-moe-runner-backend
+    auto`, SGLang picks FlashInfer's TRT-LLM MoE kernel on Blackwell, whose setup creates a symlink inside
+    `/usr/local/lib/python3.12/dist-packages/flashinfer_cubin/` (read-only image; the `--writable-tmpfs` layer is
+    small) → `OSError: [Errno 12] Cannot allocate memory`. On H200 `auto` uses SGLang's Triton MoE kernel, so this
+    never showed up there. Fix: `--sglang-moe-runner-backend triton` (set in `jobs/configs/grpo_openr1_idx3k0.sh`).
 
 ## 6. Storage used
 
