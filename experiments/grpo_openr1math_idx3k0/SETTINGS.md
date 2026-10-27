@@ -1,8 +1,8 @@
 # GRPO: Qwen3-30B-A3B-Base on OpenR1-Math-220k, every third row (0-based 0, 3, 6, ...), 1 epoch
 
 Runs **before** the SFT run (`experiments/sft_openr1math_idx3k1/`). The two use disjoint rows of the same split:
-GRPO `iloc[0::3]`, SFT `iloc[1::3]`. The SFT run is currently configured to start from the base model; whether it
-starts from this run's final checkpoint is not decided yet.
+GRPO `iloc[0::3]`, SFT `iloc[1::3]`. The SFT recipe runs from the base model and, as GRPO → SFT, from this run's
+final checkpoint (step 976; `SFT_FROM=grpo`, see the SFT run's SETTINGS.md).
 
 Single source of truth for the values: `jobs/configs/grpo_openr1_idx3k0.sh` (+ defaults in `jobs/lib/run_30b.sh`).
 

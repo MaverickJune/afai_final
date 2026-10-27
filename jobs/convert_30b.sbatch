@@ -8,14 +8,26 @@
 #SBATCH --output=logs/%x_%j.out
 # Qwen3-30B-A3B-Base: HF -> torch_dist (needed by slime as --ref-load / --load), then torch_dist -> HF
 # round-trip check (tensors bit-identical + logits). Model is ~61 GB bf16, fits on one H200.
+# CONVERT_SRC=grpo_final sbatch jobs/convert_30b.sbatch: converts the final GRPO model (step 976) instead, the start
+# of the GRPO -> SFT run (SFT_FROM=grpo in jobs/configs/sft_openr1_idx3k1.sh, which reads the same paths).
 set -euo pipefail
 source jobs/slime_common.sh
 echo "host: $(hostname)  start: $(date)"
 nvidia-smi --query-gpu=name,memory.total --format=csv
 
-HF=$SCR/models/Qwen3-30B-A3B-Base
-OUT=$SCR/ckpt/Qwen3-30B-A3B-Base_torch_dist
-RT=$SCR/verify/Qwen3-30B-A3B-Base_hf_roundtrip
+case ${CONVERT_SRC:-base} in
+    base)
+        HF=$SCR/models/Qwen3-30B-A3B-Base
+        OUT=$SCR/ckpt/Qwen3-30B-A3B-Base_torch_dist
+        RT=$SCR/verify/Qwen3-30B-A3B-Base_hf_roundtrip ;;
+    grpo_final)
+        HF=$SCR/runs/grpo_openr1math_idx3k0_qwen3_30b_a3b_base/hf_ckpts/step_00976
+        OUT=$SCR/ckpt/grpo_openr1math_idx3k0_step00976_torch_dist
+        RT=$SCR/verify/grpo_openr1math_idx3k0_step00976_hf_roundtrip ;;
+    *) echo "unknown CONVERT_SRC=$CONVERT_SRC (base | grpo_final)"; exit 1 ;;
+esac
+echo "CONVERT_SRC=${CONVERT_SRC:-base}: $HF -> $OUT"
+[ -f "$HF/config.json" ] || { echo "no config.json in $HF"; exit 1; }
 rm -rf "$OUT" "$RT"   # outputs of a previous run of this job only
 mkdir -p "$SCR/ckpt"
 

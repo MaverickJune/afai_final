@@ -5,13 +5,37 @@
 # Read at job start, so edits apply to already-queued jobs. Settings are documented in
 # experiments/sft_openr1math_idx3k1/SETTINGS.md -- keep the two in sync.
 
-SFT_NAME=sft_openr1math_idx3k1_qwen3_30b_a3b_base
+# Start model, chosen at submission with SFT_FROM (default base). It also picks the run dir, so every submission of a
+# run (incl. resubmissions after a time-limit stop) needs the same SFT_FROM. Same data and recipe for both:
+#   base  Qwen3-30B-A3B-Base (same paths as the run_30b.sh defaults)
+#   grpo  final model of the GRPO run (experiments/grpo_openr1math_idx3k0, step 976), converted to torch_dist first
+#         by `CONVERT_SRC=grpo_final sbatch jobs/convert_30b.sbatch` (same paths there)
+SFT_FROM=${SFT_FROM:-base}
+case $SFT_FROM in
+    base)
+        SFT_NAME=sft_openr1math_idx3k1_qwen3_30b_a3b_base
+        SFT_HF_CKPT=$SCR/models/Qwen3-30B-A3B-Base
+        SFT_REF_LOAD=$SCR/ckpt/Qwen3-30B-A3B-Base_torch_dist ;;
+    grpo)
+        SFT_NAME=sft_openr1math_idx3k1_qwen3_30b_a3b_grpo_idx3k0
+        SFT_HF_CKPT=$SCR/runs/grpo_openr1math_idx3k0_qwen3_30b_a3b_base/hf_ckpts/step_00976
+        SFT_REF_LOAD=$SCR/ckpt/grpo_openr1math_idx3k0_step00976_torch_dist
+        # Stop here: with a missing start checkpoint Megatron only warns and trains from random weights
+        # (exit_on_missing_checkpoint is false).
+        [ -f "$SFT_REF_LOAD/latest_checkpointed_iteration.txt" ] || {
+            echo "SFT_FROM=grpo: no $SFT_REF_LOAD; run CONVERT_SRC=grpo_final sbatch jobs/convert_30b.sbatch" >&2
+            return 1
+        } ;;
+    *) echo "unknown SFT_FROM=$SFT_FROM (base | grpo)" >&2; return 1 ;;
+esac
 SFT_DATA_DIR=$SCR/data/openr1_math_sft
 SFT_DATA=$SFT_DATA_DIR/openr1_math_default_train_idx3k1.jsonl
 SFT_RUN=${SFT_RUN:-$SCR/runs/$SFT_NAME}
 
 # Environment for jobs/lib/run_30b.sh and jobs/lib/sft_ckpt.py (passed with `slime_exec env ...`).
 SFT_ENV=(
+    HF_CKPT="$SFT_HF_CKPT"                # start model: HF config + tokenizer (--hf-checkpoint)
+    REF_LOAD="$SFT_REF_LOAD"              # start model: torch_dist weights, loaded while ckpt/ is empty (--ref-load)
     FREEZE_ROUTER=0                       # router trains (no freezing)
     PROMPT_DATA="$SFT_DATA"
     NUM_EPOCH=1

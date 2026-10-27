@@ -14,10 +14,13 @@
 #   hf_ckpts/step_NNNNN/  10 weights-only bf16 HF checkpoints at log-spaced steps of the whole run
 #   ckpt/iter_NNNNNNN/    ONE full resumable Megatron checkpoint (near the job time limit, or at the end)
 # Resume: submit this same script again (it continues from ckpt/). STATUS says "done" or "needs_resume ...".
+# Start model: base by default; `SFT_FROM=grpo sbatch jobs/sft_openr1_30b.sbatch` starts from the final GRPO model in
+# its own run dir (see the config). Resubmit that run with SFT_FROM=grpo as well.
 set -euo pipefail
 source jobs/slime_common.sh
 source jobs/configs/sft_openr1_idx3k1.sh
 echo "host: $(hostname)  start: $(date)  job: $SLURM_JOB_ID"
+echo "start model: SFT_FROM=$SFT_FROM  run: $SFT_RUN"
 nvidia-smi --query-gpu=name,memory.total --format=csv
 
 mkdir -p "$SFT_RUN"

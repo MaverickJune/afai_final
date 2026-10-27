@@ -1,5 +1,8 @@
 # SFT: Qwen3-30B-A3B-Base on OpenR1-Math-220k, every third row (0-based 1, 4, 7, ...), 1 epoch
 
+Two runs use this recipe: base → SFT (this page) and GRPO → SFT, which starts from the final GRPO model
+(`SFT_FROM=grpo`, section [GRPO → SFT](#grpo--sft-sft_fromgrpo) at the end; everything else is identical).
+
 Single source of truth for the values: `jobs/configs/sft_openr1_idx3k1.sh` (+ defaults in `jobs/lib/run_30b.sh`).
 
 Where the settings are recorded:
@@ -94,3 +97,27 @@ Implementation: `jobs/lib/sft_ckpt.py`; mechanics tested by `jobs/test_sft_ckpt_
 Peak LR (1e-5), warmup (5%), min LR (1e-6), global batch (32), β2 (0.95), weight decay (0.1).
 Specified by the user: dataset/subset/split, row selection (0-based index % 3 == 1), 1 epoch, no router freezing,
 10 log-spaced bf16 weights-only checkpoints, one full resumable checkpoint near the end.
+
+## GRPO → SFT (`SFT_FROM=grpo`)
+
+The same SFT run, started from the final model of the GRPO run (`experiments/grpo_openr1math_idx3k0/`) instead of the
+base model. Data, row order, recipe, steps and checkpoint scheme are those above. Only these differ:
+
+| | |
+|---|---|
+| Start model | GRPO step 976, `$SCR/runs/grpo_openr1math_idx3k0_qwen3_30b_a3b_base/hf_ckpts/step_00976` (`--hf-checkpoint`), converted to `$SCR/ckpt/grpo_openr1math_idx3k0_step00976_torch_dist` (`--ref-load`, the weights trained from) by `CONVERT_SRC=grpo_final sbatch jobs/convert_30b.sbatch`, with the same round-trip check as the base model |
+| Run dir | `$SCR/runs/sft_openr1math_idx3k1_qwen3_30b_a3b_grpo_idx3k0` |
+| State carried over from GRPO | weights only. Optimizer moments, LR schedule and RNG start fresh, as in the base run: with no checkpoint in the run dir, slime loads `--ref-load` with `finetune`, `no_load_optim` and `no_load_rng` set |
+| Data | the 31,244 SFT rows above (`iloc[1::3]`), disjoint from GRPO's prompts (`iloc[0::3]`); same seed, so the same order as base → SFT |
+
+How to run (from the repo root, GRPO run finished):
+
+1. `ls $SCR/runs/grpo_openr1math_idx3k0_qwen3_30b_a3b_base/hf_ckpts/step_00976`: config.json, tokenizer files,
+   safetensors. Scratch files are deleted after 30 days, so convert before then.
+2. `P=$(sbatch --parsable jobs/prep_openr1_sft.sbatch)`   (SFT data, if not on this scratch yet; check its manifest as above)
+   `C=$(CONVERT_SRC=grpo_final sbatch --parsable jobs/convert_30b.sbatch)`   (1 GPU, < 3 h)
+   `SFT_FROM=grpo sbatch --dependency=afterok:$P:$C jobs/sft_openr1_30b.sbatch`
+3. If the job stops with `STATUS = needs_resume ...`: `SFT_FROM=grpo sbatch jobs/sft_openr1_30b.sbatch`. **Without
+   `SFT_FROM=grpo` the job runs base → SFT instead**; the second line of the job log says which
+   (`start model: SFT_FROM=...`).
+4. Progress: `SFT_RUN=$SCR/runs/sft_openr1math_idx3k1_qwen3_30b_a3b_grpo_idx3k0 ./jobstat.sh sft`.
