@@ -2,7 +2,7 @@
 #SBATCH --job-name=eval_bench
 #SBATCH --partition=gpu_h200
 #SBATCH --gpus=1
-#SBATCH -c 8
+#SBATCH -c 6
 #SBATCH --mem=128G
 #SBATCH -t 24:00:00
 #SBATCH --output=logs/%x_%j.out

@@ -2,7 +2,7 @@
 #SBATCH --job-name=convert_30b
 #SBATCH --partition=gpu_h200
 #SBATCH --gpus=h200:1
-#SBATCH -c 8
+#SBATCH -c 6
 #SBATCH --mem=256G
 #SBATCH -t 3:00:00
 #SBATCH --output=logs/%x_%j.out
