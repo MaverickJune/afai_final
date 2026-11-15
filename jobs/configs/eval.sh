@@ -17,9 +17,9 @@ run_info() {
     case $1 in
         sft)  RUN=$SFT_RUN;  REF=$BASE_HF ;;           # stage 1 of SFT -> RL
         grpo) RUN=$GRPO_RUN; REF=$BASE_HF ;;           # stage 1 of RL -> SFT
-        # Second stages / ablations: add when their runs exist, e.g.
+        grpo_sft) RUN=$SCR/runs/sft_openr1math_idx3k1_qwen3_30b_a3b_grpo_idx3k0; REF=$(final_ckpt "$GRPO_RUN") ;;  # stage 2 of RL -> SFT (SFT_FROM=grpo)
+        # Other second stages / ablations: add when their runs exist, e.g.
         # sft_grpo) RUN=$SCR/runs/<sft-then-grpo run>; REF=$(final_ckpt "$SFT_RUN") ;;
-        # grpo_sft) RUN=$SCR/runs/<grpo-then-sft run>; REF=$(final_ckpt "$GRPO_RUN") ;;
         # sft_frozen) RUN=$SCR/runs/<frozen-router SFT run>; REF=$BASE_HF ;;
         *) echo "unknown run '$1' (see run_info in jobs/configs/eval.sh)"; return 1 ;;
     esac
