@@ -3,8 +3,8 @@
 CPSC 4880/5880 final project (Shuang Song, Wonjun Bang). We post-train **Qwen3-30B-A3B-Base** on
 OpenR1-Math-220k with SFT and with GRPO, and analyse how each changes the model's weights, experts and routing.
 
-**Current state:** SFT (1 epoch, 976 steps) is done and analysed; GRPO and the SFT↔RL orderings come next.
-Results: [`experiments/eval/RESULTS_SFT.md`](experiments/eval/RESULTS_SFT.md) (figures in `experiments/eval/figures/<run>/`, comparisons of all runs in `figures/compare/`).
+**Current state:** SFT, GRPO and GRPO → SFT (976 steps each) are done and analysed; the SFT → GRPO ordering has not been run.
+Results: [`experiments/eval/RESULTS_SFT.md`](experiments/eval/RESULTS_SFT.md), [`experiments/eval/RESULTS_GRPO_SFT.md`](experiments/eval/RESULTS_GRPO_SFT.md) (figures in `experiments/eval/figures/<run>/`, comparisons of all runs in `figures/compare/`).
 
 ## Layout
 

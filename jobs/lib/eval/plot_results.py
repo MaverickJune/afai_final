@@ -40,15 +40,17 @@ GROUPS = [("Attention (q, k, v, o)", ["q_proj", "k_proj", "v_proj", "o_proj"]),
 #   final   benchmark folder of the model at step 976, bench_ref the benchmark folder of the reference
 RUNS = {
     "sft": dict(model="SFT", ref="base", stage="SFT", final="sft_final", bench_ref="base",
-                drift="from the base model during SFT", after="after SFT"),
+                drift="from the base model during SFT", after="after SFT", update="SFT updates"),
     "grpo": dict(model="GRPO", ref="base", stage="GRPO", final="grpo_final", bench_ref="base",
-                 drift="from the base model during GRPO", after="after GRPO"),
+                 drift="from the base model during GRPO", after="after GRPO", update="GRPO updates"),
     "grpo_sft": dict(model="GRPO → SFT", ref="GRPO final", stage="SFT", final="grpo_sft_final", bench_ref="grpo_final",
-                     drift="from the GRPO model during SFT", after="by SFT after GRPO (vs GRPO final)"),
+                     drift="from the GRPO model during SFT", after="by SFT after GRPO (vs GRPO final)",
+                     update="SFT updates (after GRPO)"),
     "grpo_sft_vs_Qwen3-30B-A3B-Base": dict(model="GRPO → SFT", ref="base", stage="SFT (after GRPO)",
                                            final="grpo_sft_final", bench_ref="base",
                                            drift="from the base model, GRPO then SFT",
-                                           after="by GRPO then SFT (vs base)"),
+                                           after="by GRPO then SFT (vs base)",
+                                           update="total GRPO + SFT updates"),
 }
 BENCH_MODELS = {"base": "Base", "sft_final": "SFT", "grpo_final": "GRPO", "grpo_sft_final": "GRPO → SFT"}
 # compare figures: colour = final model, dashed = measured from the base model across both stages
@@ -227,6 +229,9 @@ def fig_specialization(experts_gz, res, out, name, R):
     b = d.groupby("bin", observed=True).agg(x=("affinity", "mean"), y=("rel_norm", "mean"))
     print(f"[{name}] specialization bins (mean affinity, mean update/layer median):")
     print(b.round(3).to_string(index=False))
+    for lo, hi in ((-99, -2), (-2, 0), (0, 2), (2, 99)):
+        m = d[(d["affinity"] >= lo) & (d["affinity"] < hi)]
+        print(f"[{name}] affinity [{lo},{hi}): {len(m)} experts, mean update/median {m['rel_norm'].mean():.3f}")
     ax.plot(b["x"], b["y"], "-", lw=2, color=ORANGE)
     ax.plot(b["x"], b["y"], "o", ms=6, color=ORANGE, mec="white", mew=1.5)
     ax.annotate("mean of each 5% affinity bin", (b["x"].iloc[1], b["y"].iloc[1]), xytext=(12, -4),
@@ -236,7 +241,7 @@ def fig_specialization(experts_gz, res, out, name, R):
     ax.set_xlabel(f"Math affinity of the expert in the {R['ref']} model\n"
                   "(log share on math − log share on general text)")
     ax.set_ylabel("Expert update size / layer median")
-    ax.set_title(f"Do math-specialized experts get larger {R['stage']} updates?")
+    ax.set_title(f"Do math-specialized experts get larger {R['update']}?")
     ax.set_ylim(min(d["rel_norm"].quantile(0.002), b["y"].min()) * 0.95, d["rel_norm"].quantile(0.998) * 1.12)
     ax.set_xlim(d["affinity"].quantile(0.002) - 0.5, d["affinity"].quantile(0.998) + 0.5)
     sp = pd.read_csv(res / f"specialization/specialization_{name}.csv")
