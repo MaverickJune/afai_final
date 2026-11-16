@@ -4,7 +4,7 @@ CPSC 4880/5880 final project (Shuang Song, Wonjun Bang). We post-train **Qwen3-3
 OpenR1-Math-220k with SFT and with GRPO, and analyse how each changes the model's weights, experts and routing.
 
 **Current state:** SFT (1 epoch, 976 steps) is done and analysed; GRPO and the SFT↔RL orderings come next.
-Results: [`experiments/eval/RESULTS_SFT.md`](experiments/eval/RESULTS_SFT.md) (figures in `experiments/eval/figures/`).
+Results: [`experiments/eval/RESULTS_SFT.md`](experiments/eval/RESULTS_SFT.md) (figures in `experiments/eval/figures/<run>/`, comparisons of all runs in `figures/compare/`).
 
 ## Layout
 
@@ -34,7 +34,7 @@ sbatch jobs/eval_param_diff.sbatch sft                  # weight change per laye
 sbatch jobs/eval_probe.sbatch sft                       # KL and routing drift per checkpoint
 sbatch jobs/eval_specialization.sbatch sft              # are updates concentrated on math experts?
 sbatch jobs/eval_bench.sbatch sft_final                 # benchmarks (also: base, grpo_final)
-sbatch jobs/plot_sft_results.sbatch                     # figures
+sbatch jobs/plot_results.sbatch                         # figures: one folder per run + compare/ (all runs)
 ```
 
 Each step should wait for the one before it (e.g. `sbatch --dependency=afterok:<jobid> ...`).

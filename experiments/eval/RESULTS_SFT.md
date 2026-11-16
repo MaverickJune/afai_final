@@ -5,7 +5,7 @@ Stage analysed: Qwen3-30B-A3B-Base → full SFT on OpenR1-Math-220k (rows `iloc[
 **SFT checkpoint vs. the base model**. Ten checkpoints were analysed at steps 1, 2, 5, 10, 21, 46, 98, 211, 454
 and 976 (log-spaced, so early training is dense).
 
-Figures: `experiments/eval/figures/`. Numbers: `experiments/eval/results/`. Method details: `experiments/eval/PLAN.md`.
+Figures: `experiments/eval/figures/sft/`. Numbers: `experiments/eval/results/`. Method details: `experiments/eval/PLAN.md`.
 
 **Status (Oct 19):** analyses 1–4 below are complete. Benchmarks are complete for the base model (math + MMLU +
 MMLU-Pro) and for the SFT model's math set. **SFT MMLU / MMLU-Pro is still running (job 30040147)**; it was interrupted
