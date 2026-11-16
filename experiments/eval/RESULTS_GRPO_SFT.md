@@ -150,14 +150,26 @@ Math affinity is measured on each comparison's reference model (base, or GRPO fi
 | Update energy in the 10% most math-affine experts (10% = no preference) | 11.2% | 11.8% | 11.3% | 11.2% |
 | Gini of update energy over experts | 0.20 | 0.24 | 0.20 | 0.20 |
 
+Mean expert update size ÷ layer median at step 976, by math affinity (from the fig6 data, logged by
+`jobs/plot_results.sbatch`; job 33556568). The expert counts are those of the base model's affinities; for SFT after
+GRPO, whose affinities come from GRPO final, they are 1,356 / 2,025 / 1,960 / 803.
+
+| Math affinity | experts | SFT vs base | GRPO vs base | SFT after GRPO vs GRPO final | GRPO → SFT total vs base |
+|---|---|---|---|---|---|
+| < −2 (used mostly on general text) | 1,316 | 0.71 | **0.67** | 0.72 | 0.71 |
+| −2 to 0 | 2,061 | 0.99 | 0.99 | 1.00 | 0.99 |
+| 0 to 2 | 1,950 | 1.02 | **1.04** | 1.02 | 1.02 |
+| > 2 (used mostly on math) | 817 | 1.00 | **1.03** | 1.00 | 1.00 |
+
 **How to read it.**
-- **The SFT pattern holds for GRPO and for SFT after GRPO** (fig6): experts with affinity above about −1 get a
-  typical update (binned means ≈ 1.0–1.07 × the layer median), and the correlation comes from the low end. Experts
-  the reference model rarely uses on math get about half the typical update (lowest 5% bin ≈ 0.50–0.55). In no
-  comparison are the updates concentrated on a math-specialized subset.
+- **The SFT pattern holds for GRPO and for SFT after GRPO** (fig6, table above): experts with affinity above about
+  −1 get a typical update (5%-bin means 0.98–1.07 × the layer median), and the correlation comes from the low end.
+  Experts the reference model rarely uses on math get smaller updates (0.67–0.72 below affinity −2; the lowest 5% bin
+  0.50–0.55). In no comparison are the updates concentrated on a math-specialized subset.
 - **GRPO's updates follow math usage slightly more closely** (+0.43 vs +0.35, top-10% share 11.8% vs 11.2%, Gini 0.24
-  vs 0.20). One plausible reason: GRPO trains only on its own math generations, and an expert receives gradient only
-  for tokens routed to it.
+  vs 0.20). In the table this shows at both ends: rarely-used experts get less (0.67 vs 0.71) and math-used experts
+  slightly more than the median (1.03–1.04 vs 1.00–1.02). One plausible reason: GRPO trains only on its own math
+  generations, and an expert receives gradient only for tokens routed to it.
 - **Over training (c4):** GRPO's correlation is +0.32 from step 1, dips to +0.16 around steps 21–46, and climbs to
   +0.43. Before step ~100 the updates are tiny, so the early points are noisy. SFT after GRPO follows SFT from base
   step by step.
