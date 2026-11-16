@@ -1,0 +1,79 @@
+{
+ "bench": "mmlu_pro",
+ "model_dir": "/home/ss2884/scratch_pi_bk469/ss2884/runs/grpo_openr1math_idx3k0_qwen3_30b_a3b_base/hf_ckpts/step_00976",
+ "n_questions": 12032,
+ "samples_per_question": 1,
+ "accuracy": 0.5824468085106383,
+ "ci95": 0.008812299454121396,
+ "pass@1": 0.5824468085106383,
+ "truncated_rate": 0.015458776595744681,
+ "no_answer_rate": 0.16954787234042554,
+ "grade_timeouts": 0,
+ "mean_response_tokens": 940.5369847074468,
+ "max_new_tokens": 16384,
+ "sampling": {
+  "temperature": 0.6,
+  "top_p": 0.95,
+  "top_k": -1
+ },
+ "limit": 0,
+ "by_group": {
+  "biology": {
+   "n": 717,
+   "accuracy": 0.8326359832635983
+  },
+  "business": {
+   "n": 789,
+   "accuracy": 0.5095057034220533
+  },
+  "chemistry": {
+   "n": 1132,
+   "accuracy": 0.5185512367491166
+  },
+  "computer science": {
+   "n": 410,
+   "accuracy": 0.6219512195121951
+  },
+  "economics": {
+   "n": 844,
+   "accuracy": 0.7760663507109005
+  },
+  "engineering": {
+   "n": 969,
+   "accuracy": 0.49432404540763675
+  },
+  "health": {
+   "n": 818,
+   "accuracy": 0.7041564792176039
+  },
+  "history": {
+   "n": 381,
+   "accuracy": 0.5774278215223098
+  },
+  "law": {
+   "n": 1101,
+   "accuracy": 0.407811080835604
+  },
+  "math": {
+   "n": 1351,
+   "accuracy": 0.41820873427091043
+  },
+  "other": {
+   "n": 924,
+   "accuracy": 0.6298701298701299
+  },
+  "philosophy": {
+   "n": 499,
+   "accuracy": 0.6072144288577155
+  },
+  "physics": {
+   "n": 1299,
+   "accuracy": 0.5727482678983834
+  },
+  "psychology": {
+   "n": 798,
+   "accuracy": 0.7443609022556391
+  }
+ },
+ "generation_minutes_this_job": 45.309077111879986
+}

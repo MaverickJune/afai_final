@@ -1,0 +1,29 @@
+{
+ "bench": "aime24",
+ "model_dir": "/home/ss2884/scratch_pi_bk469/ss2884/runs/sft_openr1math_idx3k1_qwen3_30b_a3b_grpo_idx3k0/hf_ckpts/step_00976",
+ "n_questions": 30,
+ "samples_per_question": 16,
+ "accuracy": 0.5041666666666667,
+ "ci95": 0.1381108652898501,
+ "pass@1": 0.5041666666666667,
+ "pass@4": 0.7097435897435898,
+ "pass@16": 0.8333333333333334,
+ "truncated_rate": 0.15416666666666667,
+ "no_answer_rate": 0.15,
+ "grade_timeouts": 0,
+ "mean_response_tokens": 14014.25625,
+ "max_new_tokens": 30000,
+ "sampling": {
+  "temperature": 0.6,
+  "top_p": 0.95,
+  "top_k": -1
+ },
+ "limit": 0,
+ "by_group": {
+  "aime2024": {
+   "n": 30,
+   "accuracy": 0.5041666666666667
+  }
+ },
+ "generation_minutes_this_job": 53.029064114888506
+}

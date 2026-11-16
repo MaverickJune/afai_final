@@ -19,21 +19,21 @@
   },
   "aime26": {
     "repo": "MathArena/aime_2026",
-    "revision": "d2de22f3c656b4f56cf8981212186377d1e23bc3",
+    "revision": "d61f486805306e6e6b5913504c07763a99e1b112",
     "files_sha256": {
-      "data/train-00000-of-00001.parquet": "d91db799651b4cc1f0734f52792a695c9cc60dac342524b3d8e5b2ff31c3e957"
+      "data/train-00000-of-00001.parquet": "ae72853349a46c5f08666feb42db2d09fb4ac4fd4768c726b29702df21c7768e"
     },
     "n": 30,
-    "output_sha256": "4387472032998a703c613cd3dc6124057b95c86f091f46495c610524efd34dc1"
+    "output_sha256": "a46c16fc74dd5abe6d7c399f5954d0914eb77f19b16d1782400c9c8b1b8fb0e2"
   },
   "hmmt_feb26": {
     "repo": "MathArena/hmmt_feb_2026",
-    "revision": "02fba4f74d8e68e73e66a02d540fd979c05c274c",
+    "revision": "589a53fe152febc0f4f99f3e561007bf8da8e664",
     "files_sha256": {
-      "data/train-00000-of-00001.parquet": "e5fcff6b1c2262841c0c37bf6d7b42529f284528d5f0d5c45c52e8bf0654a916"
+      "data/train-00000-of-00001.parquet": "0b66a6f02933030bec1785e1e6284eeb633bb101267418b4bc12b5091ed829cb"
     },
     "n": 33,
-    "output_sha256": "8afc3fbc6b894a9817aae1d4af27ebc364130525664924f84a173af357c8464c"
+    "output_sha256": "454482e4f94dea3d8066cc8cb00d250031835ac58243c4d2c5dcd5e492b1b5a6"
   },
   "gsm8k": {
     "repo": "openai/gsm8k",

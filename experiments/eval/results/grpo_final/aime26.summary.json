@@ -1,0 +1,29 @@
+{
+ "bench": "aime26",
+ "model_dir": "/home/ss2884/scratch_pi_bk469/ss2884/runs/grpo_openr1math_idx3k0_qwen3_30b_a3b_base/hf_ckpts/step_00976",
+ "n_questions": 30,
+ "samples_per_question": 16,
+ "accuracy": 0.18541666666666667,
+ "ci95": 0.10821829546421473,
+ "pass@1": 0.18541666666666667,
+ "pass@4": 0.3162637362637363,
+ "pass@16": 0.4666666666666667,
+ "truncated_rate": 0.12083333333333333,
+ "no_answer_rate": 0.12291666666666666,
+ "grade_timeouts": 0,
+ "mean_response_tokens": 5537.691666666667,
+ "max_new_tokens": 30000,
+ "sampling": {
+  "temperature": 0.6,
+  "top_p": 0.95,
+  "top_k": -1
+ },
+ "limit": 0,
+ "by_group": {
+  "competition": {
+   "n": 30,
+   "accuracy": 0.18541666666666667
+  }
+ },
+ "generation_minutes_this_job": 21.326350911458334
+}
